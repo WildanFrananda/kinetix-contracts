@@ -1,0 +1,25 @@
+{
+  "name": "kinetix/contracts",
+  "description": "Kinetix wire contracts — generated from kinetix-contracts. Do not edit.",
+  "type": "library",
+  "license": "proprietary",
+  "require": {
+    "php": ">=8.3",
+    "google/protobuf": "^4.29",
+    "grpc/grpc": "^1.67"
+  },
+  "autoload": {
+    "psr-4": {
+      "Common\\": "gen/php/Common/",
+      "Identity\\": "gen/php/Identity/",
+      "Order\\": "gen/php/Order/",
+      "Payment\\": "gen/php/Payment/",
+      "Pricing\\": "gen/php/Pricing/",
+      "Shipping\\": "gen/php/Shipping/",
+      "Returns\\": "gen/php/Returns/",
+      "Fulfillment\\": "gen/php/Fulfillment/",
+      "Fleet\\": "gen/php/Fleet/",
+      "Geo\\": "gen/php/Geo/"
+    }
+  }
+}

@@ -1,0 +1,121 @@
+syntax = "proto3";
+
+package pricing.v1;
+
+import "common/v1/common.proto";
+
+service PricingService {
+  rpc CalculatePrice(CalculatePriceRequest) returns (CalculatePriceResponse);
+
+  rpc RedeemVoucher(RedeemVoucherRequest) returns (RedeemVoucherResponse);
+  rpc ReleaseVoucherRedemption(ReleaseVoucherRedemptionRequest) returns (ReleaseVoucherRedemptionResponse);
+
+  rpc AllocateFlashSaleStock(AllocateFlashSaleStockRequest) returns (AllocateFlashSaleStockResponse);
+  rpc ReleaseFlashSaleAllocation(ReleaseFlashSaleAllocationRequest) returns (ReleaseFlashSaleAllocationResponse);
+}
+
+enum DiscountType {
+  DISCOUNT_TYPE_UNSPECIFIED = 0;
+  DISCOUNT_TYPE_PERCENTAGE = 1;
+  DISCOUNT_TYPE_FIXED = 2;
+}
+
+enum DiscountScope {
+  DISCOUNT_SCOPE_UNSPECIFIED = 0;
+  DISCOUNT_SCOPE_PER_UNIT = 1;
+  DISCOUNT_SCOPE_PER_CART = 2;
+}
+
+message PriceItemRequest {
+  string product_id = 1;
+  optional string category_id = 2;
+  common.v1.Money base_price = 3;
+  int32 quantity = 4;
+}
+
+message CalculatePriceRequest {
+  repeated PriceItemRequest items = 1;
+  optional string voucher_code = 2;
+  optional common.v1.Money base_shipping_fee = 3;
+  optional string payment_method = 4;
+}
+
+message PriceItemResponse {
+  string product_id = 1;
+  common.v1.Money base_price = 2;
+  common.v1.Money final_unit_price = 3;
+  int32 quantity = 4;
+  common.v1.Money line_total = 5;
+  optional string applied_flash_sale = 6;
+  optional string applied_discount = 7;
+}
+
+message CalculatePriceResponse {
+  common.v1.Money subtotal = 1;
+  common.v1.Money total_discount = 2;
+  common.v1.Money voucher_discount = 3;
+  common.v1.Money final_total = 4;
+  optional string applied_voucher = 5;
+  repeated PriceItemResponse items = 6;
+  common.v1.Money base_shipping_fee = 7;
+  common.v1.Money shipping_discount = 8;
+  common.v1.Money final_shipping_fee = 9;
+  common.v1.Money payment_discount = 10;
+}
+
+message RedeemVoucherRequest {
+  string voucher_code = 1;
+  string order_number = 2;
+  string customer_principal_id = 3;
+  common.v1.IdempotencyKey idempotency_key = 4;
+}
+
+message RedeemVoucherResponse {
+  bool success = 1;
+  bool already_redeemed = 2;
+  int32 remaining_quota = 3;
+  common.v1.ErrorDetail error = 4;
+}
+
+message ReleaseVoucherRedemptionRequest {
+  string voucher_code = 1;
+  string order_number = 2;
+  common.v1.IdempotencyKey idempotency_key = 3;
+}
+
+message ReleaseVoucherRedemptionResponse {
+  bool success = 1;
+  bool already_released = 2;
+  int32 remaining_quota = 3;
+  common.v1.ErrorDetail error = 4;
+}
+
+message AllocateFlashSaleStockRequest {
+  string flash_sale_id = 1;
+  string product_id = 2;
+  int32 quantity = 3;
+  string order_number = 4;
+  common.v1.IdempotencyKey idempotency_key = 5;
+}
+
+message AllocateFlashSaleStockResponse {
+  bool success = 1;
+  bool already_allocated = 2;
+  int32 remaining_stock = 3;
+  common.v1.ErrorDetail error = 4;
+}
+
+message ReleaseFlashSaleAllocationRequest {
+  string flash_sale_id = 1;
+  string product_id = 2;
+  int32 quantity = 3;
+  string order_number = 4;
+  common.v1.IdempotencyKey idempotency_key = 5;
+}
+
+message ReleaseFlashSaleAllocationResponse {
+  bool success = 1;
+  bool already_released = 2;
+  int32 remaining_stock = 3;
+  common.v1.ErrorDetail error = 4;
+}

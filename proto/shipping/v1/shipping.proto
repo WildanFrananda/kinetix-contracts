@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package shipping.v1;
+
+import "common/v1/common.proto";
+
+service ShippingService {
+  rpc EstimateShippingOptions(EstimateShippingOptionsRequest) returns (EstimateShippingOptionsResponse);
+}
+
+message EstimateShippingOptionsRequest {
+  common.v1.GeoPoint origin = 1;
+  common.v1.GeoPoint destination = 2;
+  int64 total_weight_grams = 3;
+  string merchant_principal_id = 4;
+}
+
+message CourierOption {
+  string service_tier = 1;
+  string service_name = 2;
+  double distance_km = 3;
+  common.v1.Money base_shipping_fee = 4;
+  string estimated_delivery_time = 5;
+  bool is_available = 6;
+  string unavailable_reason = 7;
+}
+
+message EstimateShippingOptionsResponse {
+  double distance_km = 1;
+  repeated CourierOption options = 2;
+}

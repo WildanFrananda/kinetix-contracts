@@ -1,0 +1,66 @@
+syntax = "proto3";
+
+package payment.v1;
+
+import "common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+service PaymentService {
+  rpc CreateEscrowHold(CreateEscrowHoldRequest) returns (EscrowHoldResponse);
+  rpc ReleaseEscrow(ReleaseEscrowRequest) returns (EscrowHoldResponse);
+  rpc RefundEscrow(RefundEscrowRequest) returns (EscrowHoldResponse);
+  rpc GetEscrowStatus(GetEscrowStatusRequest) returns (EscrowHoldResponse);
+}
+
+enum EscrowStatus {
+  ESCROW_STATUS_UNSPECIFIED = 0;
+  ESCROW_STATUS_HELD = 1;
+  ESCROW_STATUS_RELEASED = 2;
+  ESCROW_STATUS_REFUNDED = 3;
+  ESCROW_STATUS_EXPIRED = 4;
+  ESCROW_STATUS_FAILED = 5;
+}
+
+message CreateEscrowHoldRequest {
+  string order_number = 1;
+  string customer_principal_id = 2;
+  string merchant_principal_id = 3;
+  string driver_principal_id = 4;
+  common.v1.Money total_order_amount = 5;
+  common.v1.Money merchant_amount = 6;
+  common.v1.Money shipping_fee_amount = 7;
+  common.v1.IdempotencyKey idempotency_key = 8;
+}
+
+message ReleaseEscrowRequest {
+  string order_number = 1;
+  common.v1.IdempotencyKey idempotency_key = 2;
+}
+
+message RefundEscrowRequest {
+  string order_number = 1;
+  string reason = 2;
+  common.v1.IdempotencyKey idempotency_key = 3;
+}
+
+message GetEscrowStatusRequest {
+  string order_number = 1;
+}
+
+message EscrowHoldResponse {
+  bool found = 1;
+  string escrow_id = 2;
+  string order_number = 3;
+  string customer_principal_id = 4;
+  string merchant_principal_id = 5;
+  string driver_principal_id = 6;
+  common.v1.Money total_order_amount = 7;
+  common.v1.Money merchant_amount = 8;
+  common.v1.Money shipping_fee_amount = 9;
+  EscrowStatus status = 10;
+  google.protobuf.Timestamp auto_release_at = 11;
+  google.protobuf.Timestamp created_at = 12;
+  google.protobuf.Timestamp released_at = 13;
+  bool already_applied = 14;
+  common.v1.ErrorDetail error = 15;
+}

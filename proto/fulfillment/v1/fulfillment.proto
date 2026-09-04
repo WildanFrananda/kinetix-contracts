@@ -1,0 +1,116 @@
+syntax = "proto3";
+
+package fulfillment.v1;
+
+import "common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+service BinStockService {
+  rpc CheckBinStock(CheckBinStockRequest) returns (CheckBinStockResponse);
+  rpc ReserveStock(ReserveStockRequest) returns (ReserveStockResponse);
+  rpc ReleaseStock(ReleaseStockRequest) returns (ReleaseStockResponse);
+}
+
+message CheckBinStockRequest {
+  string merchant_principal_id = 1;
+  string sku = 2;
+}
+
+message CheckBinStockResponse {
+  bool found = 1;
+  string sku = 2;
+  string product_name = 3;
+  int32 physical_stock = 4;
+  int32 allocated_stock = 5;
+  int32 available_stock = 6;
+  string bin_location = 7;
+  bool low_stock_warning = 8;
+}
+
+message ReserveStockRequest {
+  string merchant_principal_id = 1;
+  string sku = 2;
+  int32 quantity = 3;
+  string order_number = 4;
+  common.v1.IdempotencyKey idempotency_key = 5;
+}
+
+message ReserveStockResponse {
+  bool success = 1;
+  string bin_location = 2;
+  int32 remaining_available = 3;
+  common.v1.ErrorDetail error = 4;
+}
+
+message ReleaseStockRequest {
+  string merchant_principal_id = 1;
+  string sku = 2;
+  int32 quantity = 3;
+  string order_number = 4;
+  common.v1.IdempotencyKey idempotency_key = 5;
+}
+
+message ReleaseStockResponse {
+  bool success = 1;
+  bool already_released = 2;
+  int32 remaining_available = 3;
+  common.v1.ErrorDetail error = 4;
+}
+
+service FulfillmentService {
+  rpc CreateOrder(CreateOrderRequest) returns (CreateOrderResponse);
+  rpc GetOrderStatus(GetOrderStatusRequest) returns (GetOrderStatusResponse);
+  rpc CancelOrder(CancelOrderRequest) returns (CancelOrderResponse);
+}
+
+message CreateOrderRequest {
+  string merchant_principal_id = 1;
+  string order_number = 2;
+  common.v1.Address pickup_address = 3;
+  common.v1.Address shipping_address = 4;
+  common.v1.Money total_amount = 5;
+  repeated common.v1.OrderItem items = 6;
+  common.v1.IdempotencyKey idempotency_key = 7;
+  common.v1.GeoPoint pickup_location = 8;
+  common.v1.GeoPoint dropoff_location = 9;
+}
+
+message CreateOrderResponse {
+  bool success = 1;
+  string order_id = 2;
+  string order_number = 3;
+  common.v1.OrderStatus status = 4;
+  string merchant_principal_id = 5;
+  google.protobuf.Timestamp created_at = 6;
+  common.v1.ErrorDetail error = 7;
+}
+
+message GetOrderStatusRequest {
+  string merchant_principal_id = 1;
+  string order_id = 2;
+  string order_number = 3;
+}
+
+message GetOrderStatusResponse {
+  bool found = 1;
+  string order_id = 2;
+  string order_number = 3;
+  common.v1.OrderStatus status = 4;
+  string awb_number = 5;
+  string pod_photo_url = 6;
+  common.v1.GeoPoint driver_location = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+message CancelOrderRequest {
+  string merchant_principal_id = 1;
+  string order_id = 2;
+  string reason = 3;
+  common.v1.IdempotencyKey idempotency_key = 4;
+}
+
+message CancelOrderResponse {
+  bool success = 1;
+  string message = 2;
+  common.v1.OrderStatus current_status = 3;
+}

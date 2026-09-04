@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package fleet.v1;
+
+import "common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+service CourierTelemetryService {
+  rpc DispatchCourier(DispatchCourierRequest) returns (DispatchCourierResponse);
+  rpc StreamDriverLocation(stream DriverLocationPing) returns (stream DriverLocationAck);
+}
+
+message DispatchCourierRequest {
+  string merchant_principal_id = 1;
+  string order_id = 2;
+  string order_number = 3;
+  common.v1.Address pickup_address = 4;
+  common.v1.Address delivery_address = 5;
+  common.v1.IdempotencyKey idempotency_key = 6;
+}
+
+message DispatchCourierResponse {
+  bool success = 1;
+  string dispatch_ref = 2;
+  string assigned_driver_principal_id = 3;
+  string assigned_driver_name = 4;
+  string assigned_driver_phone = 5;
+  string vehicle = 6;
+  int32 eta_minutes = 7;
+  common.v1.ErrorDetail error = 8;
+}
+
+message DriverLocationPing {
+  string driver_principal_id = 1;
+  string order_number = 2;
+  common.v1.GeoPoint location = 3;
+  double speed_kmh = 4;
+  common.v1.CourierStatus status = 5;
+  google.protobuf.Timestamp observed_at = 6;
+}
+
+message DriverLocationAck {
+  string driver_principal_id = 1;
+  bool received = 2;
+  google.protobuf.Timestamp server_time = 3;
+}

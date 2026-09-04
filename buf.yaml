@@ -1,0 +1,43 @@
+# The Kinetix wire contract. One module, one definition of every type that crosses a process
+# boundary.
+#
+# Before this repo existed there were 43 .proto files across the service repos holding nine
+# packages between them, and three of those packages had already drifted apart:
+# pricing.v1/pricing_service.proto existed in three mutually different versions, shipping.v1 in
+# three, payment.v1 in two. Every one of them claimed the same package name, so two services
+# could generate incompatible stubs from "the same" contract and nothing would say so until a
+# field came back empty on the wire.
+#
+# Nothing in a service repo may define a wire type after this lands. A .proto outside this module
+# is a copy, and a copy is a future divergence.
+version: v2
+
+modules:
+  - path: proto
+
+# moneylint runs alongside the standard rules and is listed BEFORE any .proto content was
+# authored, on purpose. A float in a money field caught while the file is being typed costs one
+# edit; the same field caught a hop later has already been generated into eight language
+# packages and read by a service that stored it.
+plugins:
+  - plugin: ./tools/moneylint/moneylint
+
+lint:
+  use:
+    - STANDARD
+    - MONEY_NO_FLOATING_POINT
+    - MONEY_USE_COMMON_TYPE
+  # Enforced everywhere, including the packages inherited from the service repos — the point of
+  # the module is that they stop being exceptions.
+  except:
+    # RPC request/response messages in the inherited packages are not named <Method>Request /
+    # <Method>Response yet. Renaming them is a wire-compatible but code-breaking change across
+    # eight languages, and it belongs with the per-domain retype that already rewrites these
+    # files, not with the module skeleton.
+    - RPC_REQUEST_STANDARD_NAME
+    - RPC_RESPONSE_STANDARD_NAME
+    - RPC_REQUEST_RESPONSE_UNIQUE
+
+breaking:
+  use:
+    - FILE

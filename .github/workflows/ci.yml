@@ -1,0 +1,103 @@
+name: contracts
+
+# The gate for the one repository that defines every wire type. A lint rule with no job running
+# it is inert, which is why moneylint and this workflow landed together rather than one before
+# the other.
+#
+# Three things are checked, and the third is the one that matters most over time:
+#
+#   lint      — the standard rules plus moneylint, which fails a build on a float money field
+#   format    — so a diff is a change in meaning, never a reflow
+#   breaking  — against the main branch, so a field number cannot be reused or a type widened
+#               without it being deliberate. Eight language packages are generated from this
+#               module; a silent breaking change becomes eight silent breaking changes.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
+      # Built from source in this repository, not pulled from a registry: the rule and the
+      # contract it guards version together, and a plugin fetched by tag could drift from the
+      # module it is supposed to be checking.
+      - name: Build moneylint
+        working-directory: tools/moneylint
+        run: |
+          go build -o moneylint .
+          test -x moneylint
+
+      - uses: bufbuild/buf-action@v1
+        with:
+          setup_only: true
+
+      - name: Lint
+        run: buf lint
+
+      - name: Format
+        run: buf format --diff --exit-code
+
+  breaking:
+    runs-on: ubuntu-latest
+    # Nothing to compare against on the first push to an empty branch.
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: bufbuild/buf-action@v1
+        with:
+          setup_only: true
+
+      - name: Breaking change check against main
+        run: buf breaking --against ".git#branch=main"
+
+  moneylint-self-test:
+    runs-on: ubuntu-latest
+    # A lint rule that has never been seen to fail is not a lint rule. This job feeds moneylint
+    # a file that violates both rules and fails if the plugin stays silent — so the gate itself
+    # is gated.
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
+      - name: Build moneylint
+        working-directory: tools/moneylint
+        run: go build -o moneylint .
+
+      - uses: bufbuild/buf-action@v1
+        with:
+          setup_only: true
+
+      - name: moneylint must reject a float money field
+        run: |
+          mkdir -p /tmp/selftest/proto/selftest/v1
+          cd /tmp/selftest
+          cp "$GITHUB_WORKSPACE/buf.yaml" .
+          mkdir -p tools/moneylint
+          cp "$GITHUB_WORKSPACE/tools/moneylint/moneylint" tools/moneylint/
+          cat > proto/selftest/v1/selftest.proto <<'PROTO'
+          syntax = "proto3";
+          package selftest.v1;
+          message Violation {
+            double total_amount = 1;
+          }
+          PROTO
+          if buf lint; then
+            echo "moneylint accepted a double money field — the rule is not running"
+            exit 1
+          fi
+          echo "moneylint rejected it, as required"

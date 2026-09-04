@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package returns.v1;
+
+import "common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+service ReturnService {
+  rpc SubmitReturnClaim(SubmitReturnClaimRequest) returns (SubmitReturnClaimResponse);
+  rpc GetReturnStatus(GetReturnStatusRequest) returns (GetReturnStatusResponse);
+}
+
+message SubmitReturnClaimRequest {
+  string merchant_principal_id = 1;
+  string order_id = 2;
+  string order_number = 3;
+  string reason = 4;
+  repeated string photo_urls = 5;
+  common.v1.IdempotencyKey idempotency_key = 6;
+}
+
+message SubmitReturnClaimResponse {
+  bool success = 1;
+  string return_id = 2;
+  common.v1.ReturnStatus status = 3;
+  google.protobuf.Timestamp created_at = 4;
+  common.v1.ErrorDetail error = 5;
+}
+
+message GetReturnStatusRequest {
+  string merchant_principal_id = 1;
+  string return_id = 2;
+}
+
+message GetReturnStatusResponse {
+  bool found = 1;
+  string return_id = 2;
+  string order_id = 3;
+  common.v1.ReturnStatus status = 4;
+  string reason = 5;
+  google.protobuf.Timestamp resolved_at = 6;
+}

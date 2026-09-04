@@ -1,0 +1,10 @@
+# Generated code never lands here. It is published from a tag by CTR-04, and a committed copy
+# is the same defect this repo exists to remove: a second place a wire type is defined.
+gen/
+node_modules/
+*.tgz
+.DS_Store
+
+# The compiled plugin. Built from tools/moneylint/main.go by CI and by anyone running buf lint
+# locally; committing a binary would mean the rule and its source could drift apart.
+tools/moneylint/moneylint

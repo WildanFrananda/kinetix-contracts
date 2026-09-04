@@ -1,0 +1,98 @@
+syntax = "proto3";
+
+package identity.v1;
+
+service IdentityService {
+  rpc ResolvePrincipal(ResolvePrincipalRequest) returns (ResolvePrincipalResponse);
+
+  rpc GetPrincipal(GetPrincipalRequest) returns (GetPrincipalResponse);
+  rpc GetUserProfile(GetUserProfileRequest) returns (GetUserProfileResponse);
+  rpc GetMerchantInfo(GetMerchantInfoRequest) returns (GetMerchantInfoResponse);
+
+  rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+}
+
+enum PrincipalKind {
+  PRINCIPAL_KIND_UNSPECIFIED = 0;
+  PRINCIPAL_KIND_CUSTOMER = 1;
+  PRINCIPAL_KIND_MERCHANT = 2;
+  PRINCIPAL_KIND_DRIVER = 3;
+  PRINCIPAL_KIND_STAFF = 4;
+  PRINCIPAL_KIND_SERVICE = 5;
+}
+
+message ServiceLocalId {
+  string service = 1;
+  string local_id = 2;
+}
+
+message ResolvePrincipalRequest {
+  ServiceLocalId service_local_id = 1;
+}
+
+message ResolvePrincipalResponse {
+  bool found = 1;
+  string principal_id = 2;
+  PrincipalKind kind = 3;
+  string display_name = 4;
+}
+
+message GetPrincipalRequest {
+  string principal_id = 1;
+}
+
+message GetPrincipalResponse {
+  bool found = 1;
+  string principal_id = 2;
+  PrincipalKind kind = 3;
+  string display_name = 4;
+  repeated ServiceLocalId aliases = 5;
+}
+
+message GetUserProfileRequest {
+  string principal_id = 1;
+}
+
+message GetUserProfileResponse {
+  bool found = 1;
+  string principal_id = 2;
+  string email = 3;
+  string full_name = 4;
+  string phone_number = 5;
+  string street_address = 6;
+  string city = 7;
+  string postal_code = 8;
+  PrincipalKind kind = 9;
+}
+
+message GetMerchantInfoRequest {
+  string principal_id = 1;
+}
+
+message GetMerchantInfoResponse {
+  bool found = 1;
+  string merchant_principal_id = 2;
+  string store_name = 3;
+  string business_registration_number = 4;
+  string tax_id = 5;
+  MerchantStatus status = 6;
+}
+
+enum MerchantStatus {
+  MERCHANT_STATUS_UNSPECIFIED = 0;
+  MERCHANT_STATUS_PENDING = 1;
+  MERCHANT_STATUS_VERIFIED = 2;
+  MERCHANT_STATUS_SUSPENDED = 3;
+  MERCHANT_STATUS_CLOSED = 4;
+}
+
+message ValidateTokenRequest {
+  string access_token = 1;
+}
+
+message ValidateTokenResponse {
+  bool valid = 1;
+  string principal_id = 2;
+  PrincipalKind kind = 3;
+  string reason = 4;
+}

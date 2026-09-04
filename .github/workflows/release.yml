@@ -1,0 +1,122 @@
+name: release
+
+# Publishes the generated packages from one tag, to four registries.
+#
+# Four and not eight, deliberately. A published package buys one thing: a version-pinned
+# dependency, so "which contract does this service speak?" is answered by a manifest instead of
+# by reading the code. Four of the eight consuming stacks do not need a package to get that:
+#
+#   C#      Grpc.Tools generates from .proto during the build
+#   Java    protobuf-maven-plugin does the same
+#   Rust    tonic-build runs from build.rs
+#   Elixir  protoc-gen-elixir runs from the mix task
+#
+# They consume the .proto files from this repository at the git tag, which pins the version just
+# as firmly — the only difference is that a tag can be moved and a published version cannot, so
+# the discipline is that a release tag is never moved.
+#
+# Dropping the other four removes the whole of Maven Central's verified-namespace and GPG-signing
+# setup, which was the longest lead time in the segment and bought nothing the build did not
+# already do.
+#
+# The tag is the version. Nothing here computes a version, bumps a file, or publishes from a
+# branch: eight packages that claim to be v1.0.0 must be generated from the same commit, or the
+# guarantee this repository exists to provide — that one .proto produces one shape everywhere —
+# is false in exactly the way that is hardest to notice.
+#
+# Rust and Elixir ship the .proto files rather than generated code. tonic-build and
+# protoc-gen-elixir both run from the consuming project's build and neither has a maintained
+# remote plugin, so vendoring generated output would mean generating it with a toolchain version
+# this workflow cannot pin.
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: read
+
+jobs:
+  # The tag must describe the contract it claims to. A tag pushed at a commit whose lint or
+  # breaking check fails would publish eight packages nobody can trust.
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
+      - name: Build moneylint
+        working-directory: tools/moneylint
+        run: go build -o moneylint .
+
+      - uses: bufbuild/buf-action@v1
+        with:
+          setup_only: true
+
+      - run: buf lint
+      - run: buf format --diff --exit-code
+      - name: No breaking change against the previous tag
+        run: |
+          previous="$(git describe --tags --abbrev=0 "${GITHUB_REF_NAME}^" 2>/dev/null || true)"
+          if [ -z "$previous" ]; then
+            echo "no earlier tag; nothing to compare against"
+            exit 0
+          fi
+          echo "comparing against $previous"
+          buf breaking --against ".git#tag=$previous"
+
+  generate:
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: bufbuild/buf-action@v1
+        with:
+          setup_only: true
+      - run: buf generate
+      # One artifact, consumed by every publish job below. Generating once and publishing the
+      # same bytes eight times is the point: eight jobs each running `buf generate` could each
+      # resolve a different plugin version.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: generated
+          path: gen/
+          retention-days: 7
+
+  publish:
+    needs: generate
+    runs-on: ubuntu-latest
+    strategy:
+      # Never fail-fast. One registry being down must not leave the other seven unpublished at
+      # a version that already exists as a tag.
+      fail-fast: false
+      matrix:
+        include:
+          - language: typescript
+            registry: npm
+          - language: python
+            registry: pypi
+          - language: ruby
+            registry: rubygems
+          - language: php
+            registry: packagist
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: generated
+          path: gen/
+
+      - name: Publish ${{ matrix.language }} to ${{ matrix.registry }}
+        env:
+          VERSION: ${{ github.ref_name }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
+          RUBYGEMS_API_KEY: ${{ secrets.RUBYGEMS_API_KEY }}
+        run: bash packaging/publish.sh "${{ matrix.language }}"

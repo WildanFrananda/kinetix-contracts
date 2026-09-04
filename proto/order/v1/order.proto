@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package order.v1;
+
+import "common/v1/common.proto";
+
+service OrderService {
+  rpc GetOrderDetails(GetOrderDetailsRequest) returns (GetOrderDetailsResponse);
+  rpc ListOrdersForPrincipal(ListOrdersForPrincipalRequest) returns (ListOrdersForPrincipalResponse);
+}
+
+message GetOrderDetailsRequest {
+  string order_id = 1;
+}
+
+message OrderLine {
+  string product_id = 1;
+  string product_title = 2;
+  common.v1.Money unit_price = 3;
+  int32 quantity = 4;
+  common.v1.Money line_subtotal = 5;
+}
+
+message GetOrderDetailsResponse {
+  bool found = 1;
+  string order_id = 2;
+  string order_number = 3;
+  string customer_principal_id = 4;
+  common.v1.OrderStatus status = 5;
+  common.v1.Money subtotal = 6;
+  common.v1.Money discount_amount = 7;
+  common.v1.Money shipping_fee = 8;
+  common.v1.Money final_total = 9;
+  repeated OrderLine lines = 10;
+  common.v1.Address shipping_address = 11;
+}
+
+message ListOrdersForPrincipalRequest {
+  string principal_id = 1;
+  common.v1.OrderStatus status = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+}
+
+message ListOrdersForPrincipalResponse {
+  repeated GetOrderDetailsResponse orders = 1;
+  int32 total_count = 2;
+}

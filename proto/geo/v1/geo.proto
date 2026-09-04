@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package geo.v1;
+
+import "common/v1/common.proto";
+
+service GeocodingService {
+  rpc GeocodeAddress(GeocodeAddressRequest) returns (GeocodeAddressResponse);
+  rpc GeocodeAddresses(GeocodeAddressesRequest) returns (GeocodeAddressesResponse);
+}
+
+enum GeocodeFailure {
+  GEOCODE_FAILURE_UNSPECIFIED = 0;
+  GEOCODE_FAILURE_NOT_FOUND = 1;
+  GEOCODE_FAILURE_AMBIGUOUS = 2;
+  GEOCODE_FAILURE_PROVIDER_UNAVAILABLE = 3;
+  GEOCODE_FAILURE_OUT_OF_SERVICE_AREA = 4;
+  GEOCODE_FAILURE_INSUFFICIENT_ADDRESS = 5;
+}
+
+message GeocodeAddressRequest {
+  common.v1.Address address = 1;
+}
+
+message GeocodeAddressResponse {
+  bool geocoded = 1;
+  common.v1.GeoPoint location = 2;
+  GeocodeFailure failure = 3;
+  string failure_detail = 4;
+  GeocodePrecision precision = 5;
+}
+
+enum GeocodePrecision {
+  GEOCODE_PRECISION_UNSPECIFIED = 0;
+  GEOCODE_PRECISION_ROOFTOP = 1;
+  GEOCODE_PRECISION_STREET = 2;
+  GEOCODE_PRECISION_SUBURB = 3;
+  GEOCODE_PRECISION_CITY = 4;
+}
+
+message GeocodeAddressesRequest {
+  repeated common.v1.Address addresses = 1;
+}
+
+message GeocodeAddressesResponse {
+  repeated GeocodeAddressResponse results = 1;
+}

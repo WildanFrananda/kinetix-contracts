@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kinetix-contracts"
+version = "__VERSION__"
+description = "Kinetix wire contracts — generated from kinetix-contracts. Do not edit."
+requires-python = ">=3.11"
+dependencies = ["protobuf>=5.29", "grpcio>=1.67"]
+
+[tool.setuptools.packages.find]
+where = ["."]
