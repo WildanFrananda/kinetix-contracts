@@ -1,5 +1,5 @@
 {
-  "name": "@kinetix/contracts",
+  "name": "kinetix-contracts",
   "version": "0.0.0",
   "description": "Kinetix wire contracts \u2014 generated from kinetix-contracts. Do not edit.",
   "license": "UNLICENSED",

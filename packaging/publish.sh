@@ -62,16 +62,59 @@ case "$language" in
     ;;
 
   php)
-    # Packagist publishes from the git tag itself; there is nothing to upload. The composer.json
-    # has to be at the repository root for it to see, which is why this branch checks rather
-    # than pushes.
-    test -f composer.json || {
-      echo "composer.json is missing from the repository root; Packagist reads the tag directly"
+    # Packagist publishes from a git tag, and this repository's tags carry no generated code:
+    # gen/ is gitignored on purpose, because a committed copy of a wire type is the exact defect
+    # this repository exists to remove. So the PHP package lives in a read-only split repository
+    # that this job rebuilds from the generated output and tags. Nothing there is ever
+    # hand-edited; it is a build artifact that happens to have a git history, which is the only
+    # thing Composer needs in order to resolve a version.
+    require CONTRACTS_PHP_TOKEN
+    split_repo="${CONTRACTS_PHP_REPO:-WildanFrananda/kinetix-contracts-php}"
+
+    test -d gen/php || { echo "gen/php is missing; the generate job produced no PHP"; exit 1; }
+
+    work="$(mktemp -d)"
+    mkdir -p "$work/src"
+    cp -R gen/php/. "$work/src/"
+    cp packaging/composer/composer.json "$work/composer.json"
+
+    # A real guard, not a formality. An empty src/ publishes a package that resolves, installs
+    # cleanly, and then dies at the first `new Money()` with a class-not-found — the worst shape
+    # of failure, because it reads as the consumer's bug.
+    php_files="$(find "$work/src" -name '*.php' | wc -l | tr -d ' ')"
+    test "$php_files" -gt 0 || {
+      echo "no .php files were generated; refusing to publish an empty package"
       exit 1
     }
-    echo "Packagist publishes from tag $version once the repository webhook fires. Nothing to upload."
-    ;;
+    echo "packaging $php_files generated PHP files"
 
+    cat > "$work/README.md" <<EOF
+# kinetix-contracts-php
+
+Generated from [kinetix-contracts](https://github.com/WildanFrananda/kinetix-contracts) at \`$version\`.
+
+**Do not edit this repository and do not open pull requests against it.** Every commit here is
+overwritten by the release workflow in the source repository. Change the \`.proto\` files there.
+EOF
+
+    cd "$work"
+    git init --quiet -b main
+    git config user.name "kinetix-contracts release"
+    git config user.email "noreply@github.com"
+    git add -A
+    git commit --quiet -m "Generated from kinetix-contracts $version"
+    git tag "$version"
+
+    remote="https://x-access-token:${CONTRACTS_PHP_TOKEN}@github.com/${split_repo}.git"
+
+    # The branch is force-pushed because it is a rebuild, not a history. The tag is not, and
+    # deliberately so: a tag that can move is a version that can change meaning underneath a
+    # consumer that already resolved it. Plain `git push` fails outright if the tag exists.
+    git push --quiet --force "$remote" main
+    git push --quiet "$remote" "$version"
+
+    echo "pushed $version to $split_repo; Packagist updates when its webhook fires"
+    ;;
 
 
   *)

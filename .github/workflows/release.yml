@@ -92,7 +92,7 @@ jobs:
     needs: generate
     runs-on: ubuntu-latest
     strategy:
-      # Never fail-fast. One registry being down must not leave the other seven unpublished at
+      # Never fail-fast. One registry being down must not leave the other three unpublished at
       # a version that already exists as a tag.
       fail-fast: false
       matrix:
@@ -119,4 +119,5 @@ jobs:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
           RUBYGEMS_API_KEY: ${{ secrets.RUBYGEMS_API_KEY }}
+          CONTRACTS_PHP_TOKEN: ${{ secrets.CONTRACTS_PHP_TOKEN }}
         run: bash packaging/publish.sh "${{ matrix.language }}"

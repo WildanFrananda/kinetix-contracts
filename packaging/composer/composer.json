@@ -1,0 +1,19 @@
+{
+  "name": "wildanfrananda/kinetix-contracts",
+  "description": "Kinetix wire contracts — generated from kinetix-contracts. Do not edit.",
+  "type": "library",
+  "license": "proprietary",
+  "require": {
+    "php": ">=8.3",
+    "google/protobuf": "^4.29",
+    "grpc/grpc": "^1.57"
+  },
+  "autoload": {
+    "psr-4": {
+      "": "src/"
+    }
+  },
+  "config": {
+    "sort-packages": true
+  }
+}

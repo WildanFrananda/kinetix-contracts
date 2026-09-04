@@ -77,10 +77,10 @@ shape everywhere — is false in the way hardest to notice.
 
 | stack | how it gets the contract |
 |---|---|
-| TypeScript | `@kinetix/contracts` on **npm** |
+| TypeScript | `kinetix-contracts` on **npm** |
 | Python | `kinetix-contracts` on **PyPI** |
 | Ruby | `kinetix-contracts` on **RubyGems** |
-| PHP | `kinetix/contracts` on **Packagist**, read from the tag itself |
+| PHP | `wildanfrananda/kinetix-contracts` on **Packagist**, via a generated split repository |
 | C# | generates from `.proto` at build (`Grpc.Tools`) |
 | Java | generates from `.proto` at build (`protobuf-maven-plugin`) |
 | Rust | generates from `.proto` at build (`tonic-build`) |
@@ -100,14 +100,38 @@ building from the same tag name must always get the same bytes.
 Dropping the other four removes Maven Central's verified-namespace and GPG-signing setup
 entirely, which was the longest lead time here and bought nothing the build did not already do.
 
+### Names
+
+None of these are scoped or namespaced under `kinetix`. The npm organisation and the Packagist
+vendor of that name are both already owned by someone else, and neither registry lets a name be
+reserved by intent. The npm package is therefore unscoped, which has the side benefit of making
+the name identical on npm, PyPI and RubyGems; the Composer package sits under the `wildanfrananda`
+vendor, which is the GitHub account that owns the repository anyway.
+
+### PHP is not like the other three
+
+Composer resolves a version from a git tag, and the tags of *this* repository carry no generated
+code — `gen/` is gitignored on purpose, because a committed copy of a wire type is the exact
+defect this repository exists to remove.
+
+So the release workflow rebuilds a read-only split repository, `kinetix-contracts-php`, from the
+generated PHP and tags it with the same version. Composer reads that; nobody edits it. Its `main`
+is force-pushed on every release because it is a build output, not a history — but its **tags are
+never force-pushed**, and `publish.sh` will fail loudly rather than move one.
+
+The job also refuses to publish when no `.php` files were generated. An empty package resolves,
+installs cleanly, and then dies at the first `new Money()` with a class-not-found, which reads as
+the consumer's bug rather than as this repository's.
+
 ### What has to exist before the first tag
 
-Four accounts, and three repository secrets:
+Four accounts, one extra repository, and four repository secrets:
 
-    NPM_TOKEN     PYPI_TOKEN     RUBYGEMS_API_KEY
+    NPM_TOKEN     PYPI_TOKEN     RUBYGEMS_API_KEY     CONTRACTS_PHP_TOKEN
 
-Packagist needs no secret — it reads the tag through a repository webhook — but the package has
-to be submitted there once by hand.
+`CONTRACTS_PHP_TOKEN` is a fine-grained GitHub token with `contents: write` on
+`kinetix-contracts-php` and nothing else. Packagist itself needs no secret — it reads the split
+repository through a webhook — but that package has to be submitted there once by hand.
 
 Every branch of `publish.sh` refuses to run without its credential rather than skipping quietly.
 A publish job that exits 0 having published nothing is how a tag comes to mean three packages in
