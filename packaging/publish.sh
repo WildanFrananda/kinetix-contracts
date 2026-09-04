@@ -73,6 +73,40 @@ case "$language" in
 
     test -d gen/php || { echo "gen/php is missing; the generate job produced no PHP"; exit 1; }
 
+    # Ask before doing the work. Without this, a token that cannot push fails on the very last
+    # line — after generating, copying, committing and tagging — with git's "Permission to ...
+    # denied", which says nothing about which of the three possible causes it was. The API
+    # answers all three at once and costs one request.
+    perm="$(curl -sS --max-time 20 \
+      -H "Authorization: Bearer $CONTRACTS_PHP_TOKEN" \
+      -H "Accept: application/vnd.github+json" \
+      -o /tmp/split-repo.json -w '%{http_code}' \
+      "https://api.github.com/repos/${split_repo}")"
+
+    case "$perm" in
+      404)
+        echo "CONTRACTS_PHP_TOKEN cannot see $split_repo."
+        echo "A fine-grained token must list that repository under 'Only select repositories';"
+        echo "a token created before the repository existed will not have it."
+        exit 1 ;;
+      401)
+        echo "CONTRACTS_PHP_TOKEN was rejected. It is expired, revoked, or was pasted truncated."
+        exit 1 ;;
+      200) : ;;
+      *)
+        echo "GitHub returned $perm for $split_repo; cannot establish whether this token may push."
+        exit 1 ;;
+    esac
+
+    can_push="$(jq -r '.permissions.push // false' /tmp/split-repo.json)"
+    if [ "$can_push" != "true" ]; then
+      echo "CONTRACTS_PHP_TOKEN can read $split_repo but not push to it."
+      echo "Fine-grained: Repository permissions > Contents must be 'Read and write', not 'Read-only'."
+      echo "Classic: the 'repo' scope must be ticked."
+      exit 1
+    fi
+    echo "token may push to $split_repo"
+
     work="$(mktemp -d)"
     mkdir -p "$work/src"
     cp -R gen/php/. "$work/src/"
