@@ -30,9 +30,40 @@ case "$language" in
     require NPM_TOKEN
     cd gen/ts
     cp ../../packaging/npm/package.json .
+
+    # The .proto sources travel with the package, not just the code generated from them.
+    #
+    # NestJS's gRPC transport takes a `protoPath` and parses the file at runtime — generated
+    # JavaScript is no use to it. Elixir and Rust generate at build time and need the source for
+    # the same reason. Shipping both means one dependency serves every consumption style, rather
+    # than four stacks vendoring the .proto again and diverging, which is what this repository
+    # exists to stop.
+    mkdir -p proto
+    cp -R ../../proto/. proto/
     # The version comes from the tag, never from a committed file — two places to change a
     # version is one place to forget.
     npm version "$semver" --no-git-tag-version --allow-same-version
+
+    # What `npm publish` would actually ship, checked before it ships it.
+    #
+    # v1.0.0 went out containing package.json and nothing else: buf emitted `.ts` while
+    # package.json's `files` asked for `.js` and `.d.ts`, so every generated file was excluded
+    # and npm called that a success. A publish that packages no contract is worse than a failed
+    # one, because everything downstream installs it and finds nothing.
+    packed="$(npm pack --dry-run --json 2>/dev/null | node -e '
+      let raw = ""
+      process.stdin.on("data", (d) => (raw += d))
+      process.stdin.on("end", () => {
+        const files = JSON.parse(raw)[0].files.map((f) => f.path)
+        console.log(files.filter((f) => f.endsWith(".js") || f.endsWith(".d.ts") || f.endsWith(".proto")).length)
+      })')"
+    test "${packed:-0}" -gt 0 || {
+      echo "npm pack would ship $packed generated files; refusing to publish an empty package"
+      echo "check that buf.gen.yaml's target matches package.json's \"files\" globs"
+      exit 1
+    }
+    echo "packaging $packed generated JavaScript files"
+
     printf '//registry.npmjs.org/:_authToken=%s\n' "$NPM_TOKEN" > .npmrc
     npm publish --access public
     ;;

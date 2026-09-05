@@ -1,13 +1,14 @@
 {
   "name": "kinetix-contracts",
   "version": "0.0.0",
-  "description": "Kinetix wire contracts \u2014 generated from kinetix-contracts. Do not edit.",
+  "description": "Kinetix wire contracts \u2014 generated from kinetix-contracts. Ships the generated JavaScript and the .proto sources themselves. Do not edit.",
   "license": "UNLICENSED",
   "private": false,
   "type": "module",
   "files": [
     "**/*.js",
-    "**/*.d.ts"
+    "**/*.d.ts",
+    "proto/**/*.proto"
   ],
   "dependencies": {
     "@bufbuild/protobuf": "^2.2.3"

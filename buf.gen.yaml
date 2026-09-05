@@ -36,7 +36,12 @@ plugins:
   - remote: buf.build/bufbuild/es:v2.2.3
     out: gen/ts/src
     opt:
-      - target=ts
+      # `target=js` plus `target=dts`, not `target=ts`. The npm package ships runnable
+      # JavaScript and its declarations; `.ts` would need a compile step the publish job does
+      # not have — and did not have, which is how v1.0.0 went out as 368 bytes of package.json
+      # and nothing else. npm reported success.
+      - target=js
+      - target=dts
 
   # Python — kinetix-catalog-service (Django) → PyPI
   - remote: buf.build/protocolbuffers/python:v29.3
