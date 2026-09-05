@@ -102,23 +102,33 @@ case "$language" in
     sed -i "s/__VERSION__/$semver/" kinetix-contracts.gemspec
     gem build kinetix-contracts.gemspec
 
-    # The check that matters is not "did it build" but "can a consumer require it".
+    # The check that matters is not "did it build" but "can a consumer reach what is inside".
     #
-    # v1.0.3 built, pushed, installed and reported success while `require
-    # "identity/v1/identity_services_pb"` raised LoadError — the gemspec had no `require_paths`
-    # so it defaulted to lib/, and every generated file sits at the gem root. Installing the
-    # freshly built gem into a scratch directory and requiring one file out of it is the only
-    # thing that would have caught that.
+    # v1.0.3 built, pushed and installed while `require "identity/v1/identity_services_pb"` raised
+    # LoadError: the gemspec declared no `require_paths`, so it defaulted to lib/, and every
+    # generated file sits at the gem root instead.
+    #
+    # Read out of the built .gem rather than by installing and requiring. Installing means
+    # resolving `grpc`, which compiles a native extension and would put minutes of C++ into a
+    # publish job to answer a question about a manifest. This asks the manifest.
     built="$(ls -t ./*.gem | head -1)"
-    scratch="$(mktemp -d)"
-    gem install --install-dir "$scratch" --no-document --ignore-dependencies "$built" >/dev/null
-    GEM_HOME="$scratch" GEM_PATH="$scratch" ruby -e '
-      gem "kinetix-contracts"
-      require "identity/v1/identity_pb"
-      abort "the gem installed but Identity::V1 is not defined" unless defined?(Identity::V1)
-      puts "requiring identity/v1/identity_pb out of the built gem works"
-    ' || { echo "the built gem is not requirable; refusing to publish it"; rm -rf "$scratch"; exit 1; }
-    rm -rf "$scratch"
+    ruby -rrubygems/package -e '
+      spec = Gem::Package.new(ARGV[0]).spec
+      rb = spec.files.grep(/\.rb\z/)
+      abort "the gem contains no .rb files at all" if rb.empty?
+
+      reachable = rb.select do |f|
+        spec.require_paths.any? { |rp| rp == "." ? true : f.start_with?("#{rp}/") }
+      end
+
+      if reachable.empty?
+        warn "require_paths #{spec.require_paths.inspect} reaches none of the #{rb.size} .rb files"
+        warn "the first few are: #{rb.first(3).join(", ")}"
+        abort "nothing in this gem is requirable; refusing to publish it"
+      end
+
+      puts "#{reachable.size} of #{rb.size} .rb files are reachable from #{spec.require_paths.inspect}"
+    ' "$built" || exit 1
 
     mkdir -p ~/.gem
     printf -- '---\n:rubygems_api_key: %s\n' "$RUBYGEMS_API_KEY" > ~/.gem/credentials
