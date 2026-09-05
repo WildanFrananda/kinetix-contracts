@@ -90,6 +90,28 @@ case "$language" in
     sed -i "s/__VERSION__/$semver/" pyproject.toml
     python -m pip install --quiet build twine
     python -m build
+
+    # Install the built wheel into a throwaway environment and import out of it.
+    #
+    # The other three languages each shipped something unusable before this was checked:
+    # npm packaged no contract at all, the gem's require_paths pointed at a directory it had no
+    # files in. Python's layout happens to be right, and "happens to be" is the part worth
+    # removing — a wheel that builds and uploads is not a wheel a consumer can import.
+    wheel="$(ls -t dist/*.whl | head -1)"
+    scratch="$(mktemp -d)"
+    python -m venv "$scratch/venv"
+    "$scratch/venv/bin/pip" install --quiet "$wheel"
+    "$scratch/venv/bin/python" -c '
+from identity.v1 import identity_pb2
+from fulfillment.v1 import fulfillment_pb2
+request = identity_pb2.GetUserProfileRequest(principal_id="probe")
+assert request.principal_id == "probe", "the generated message did not round-trip a field"
+fields = [f.name for f in fulfillment_pb2.CreateOrderRequest.DESCRIPTOR.fields]
+assert "merchant_principal_id" in fields, f"CreateOrderRequest has no merchant_principal_id: {fields}"
+print("importing identity.v1 and fulfillment.v1 out of the built wheel works")
+' || { echo "the built wheel is not importable; refusing to publish it"; rm -rf "$scratch"; exit 1; }
+    rm -rf "$scratch"
+
     TWINE_USERNAME=__token__ TWINE_PASSWORD="$PYPI_TOKEN" python -m twine upload dist/*
     ;;
 
