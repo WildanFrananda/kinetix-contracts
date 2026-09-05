@@ -101,6 +101,25 @@ case "$language" in
     cp ../../packaging/rubygems/kinetix-contracts.gemspec .
     sed -i "s/__VERSION__/$semver/" kinetix-contracts.gemspec
     gem build kinetix-contracts.gemspec
+
+    # The check that matters is not "did it build" but "can a consumer require it".
+    #
+    # v1.0.3 built, pushed, installed and reported success while `require
+    # "identity/v1/identity_services_pb"` raised LoadError — the gemspec had no `require_paths`
+    # so it defaulted to lib/, and every generated file sits at the gem root. Installing the
+    # freshly built gem into a scratch directory and requiring one file out of it is the only
+    # thing that would have caught that.
+    built="$(ls -t ./*.gem | head -1)"
+    scratch="$(mktemp -d)"
+    gem install --install-dir "$scratch" --no-document --ignore-dependencies "$built" >/dev/null
+    GEM_HOME="$scratch" GEM_PATH="$scratch" ruby -e '
+      gem "kinetix-contracts"
+      require "identity/v1/identity_pb"
+      abort "the gem installed but Identity::V1 is not defined" unless defined?(Identity::V1)
+      puts "requiring identity/v1/identity_pb out of the built gem works"
+    ' || { echo "the built gem is not requirable; refusing to publish it"; rm -rf "$scratch"; exit 1; }
+    rm -rf "$scratch"
+
     mkdir -p ~/.gem
     printf -- '---\n:rubygems_api_key: %s\n' "$RUBYGEMS_API_KEY" > ~/.gem/credentials
     chmod 600 ~/.gem/credentials
