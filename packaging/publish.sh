@@ -55,14 +55,29 @@ case "$language" in
       process.stdin.on("data", (d) => (raw += d))
       process.stdin.on("end", () => {
         const files = JSON.parse(raw)[0].files.map((f) => f.path)
-        console.log(files.filter((f) => f.endsWith(".js") || f.endsWith(".d.ts") || f.endsWith(".proto")).length)
+        // Counted separately. A package of .d.ts with no .js ships types for an implementation
+        // that is not there — which is what `target=js` and `target=dts` as two list entries
+        // produced: buf joins them into one comma-separated option string and the plugin keeps
+        // the last, so v1.0.2 went out as ten declarations and zero modules.
+        const js = files.filter((f) => f.endsWith(".js")).length
+        const dts = files.filter((f) => f.endsWith(".d.ts")).length
+        const proto = files.filter((f) => f.endsWith(".proto")).length
+        console.log(JSON.stringify({ js, dts, proto }))
       })')"
-    test "${packed:-0}" -gt 0 || {
-      echo "npm pack would ship $packed generated files; refusing to publish an empty package"
-      echo "check that buf.gen.yaml's target matches package.json's \"files\" globs"
-      exit 1
-    }
-    echo "packaging $packed generated JavaScript files"
+    js="$(printf '%s' "$packed" | sed -n 's/.*"js":\([0-9]*\).*/\1/p')"
+    dts="$(printf '%s' "$packed" | sed -n 's/.*"dts":\([0-9]*\).*/\1/p')"
+    proto="$(printf '%s' "$packed" | sed -n 's/.*"proto":\([0-9]*\).*/\1/p')"
+
+    for pair in "js:${js:-0}" "dts:${dts:-0}" "proto:${proto:-0}"; do
+      kind="${pair%%:*}"; count="${pair##*:}"
+      test "$count" -gt 0 || {
+        echo "npm pack would ship no .$kind files; refusing to publish an incomplete package"
+        echo "  js=${js:-0} dts=${dts:-0} proto=${proto:-0}"
+        echo "check buf.gen.yaml's target option against package.json's \"files\" globs"
+        exit 1
+      }
+    done
+    echo "packaging ${js} modules, ${dts} declarations and ${proto} .proto sources"
 
     printf '//registry.npmjs.org/:_authToken=%s\n' "$NPM_TOKEN" > .npmrc
     npm publish --access public
