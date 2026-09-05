@@ -5,7 +5,8 @@
   "license": "proprietary",
   "require": {
     "php": ">=8.3",
-    "google/protobuf": "^4.29",
+    "_comment_protobuf": "Lower bound, not a caret. The generated classes use the runtime API that has been stable across 4.x and 5.x, and a caret excluded 5.x outright — which made the package uninstallable in kinetix-review-service, whose Laravel 13 tree already required google/protobuf ^5.36. A contracts package that cannot be installed beside a current framework is not a shared contract.",
+    "google/protobuf": ">=4.29",
     "grpc/grpc": "^1.57"
   },
   "autoload": {
