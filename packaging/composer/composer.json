@@ -3,15 +3,24 @@
   "description": "Kinetix wire contracts — generated from kinetix-contracts. Do not edit.",
   "type": "library",
   "license": "proprietary",
+  "_comment_protobuf": "google/protobuf is a bounded range, not a caret. The generated classes use the runtime API that has been stable across 4.x and 5.x, and a caret excluded 5.x outright — which made the package uninstallable in kinetix-review-service, whose Laravel 13 tree already required google/protobuf ^5.36. A contracts package that cannot be installed beside a current framework is not a shared contract. This note sits at the root because Composer parses every value inside require as a version constraint: the same sentence written there is what made v1.0.1 through v1.0.5 refuse to load.",
   "require": {
     "php": ">=8.3",
-    "_comment_protobuf": "Lower bound, not a caret. The generated classes use the runtime API that has been stable across 4.x and 5.x, and a caret excluded 5.x outright — which made the package uninstallable in kinetix-review-service, whose Laravel 13 tree already required google/protobuf ^5.36. A contracts package that cannot be installed beside a current framework is not a shared contract.",
-    "google/protobuf": ">=4.29",
+    "google/protobuf": ">=4.29 <6",
     "grpc/grpc": "^1.57"
   },
   "autoload": {
     "psr-4": {
-      "": "src/"
+      "Common\\": "src/Common/",
+      "Fleet\\": "src/Fleet/",
+      "Fulfillment\\": "src/Fulfillment/",
+      "Geo\\": "src/Geo/",
+      "Identity\\": "src/Identity/",
+      "Order\\": "src/Order/",
+      "Payment\\": "src/Payment/",
+      "Pricing\\": "src/Pricing/",
+      "Returns\\": "src/Returns/",
+      "Shipping\\": "src/Shipping/"
     }
   },
   "config": {

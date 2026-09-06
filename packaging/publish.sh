@@ -166,6 +166,13 @@ print("importing identity.v1 and fulfillment.v1 out of the built wheel works")
     # hand-edited; it is a build artifact that happens to have a git history, which is the only
     # thing Composer needs in order to resolve a version.
     require CONTRACTS_PHP_TOKEN
+    # Packagist does not watch the split repository. It crawled it once, when the package was
+    # first submitted, and never again — which is how v1.0.1 through v1.0.5 came to exist as tags
+    # that Composer could not resolve. Pushing the tag is only half a publish; telling Packagist
+    # is the other half, and it is checked here rather than after the push so a missing credential
+    # costs nothing.
+    require PACKAGIST_USERNAME
+    require PACKAGIST_API_TOKEN
     split_repo="${CONTRACTS_PHP_REPO:-WildanFrananda/kinetix-contracts-php}"
 
     test -d gen/php || { echo "gen/php is missing; the generate job produced no PHP"; exit 1; }
@@ -219,6 +226,59 @@ print("importing identity.v1 and fulfillment.v1 out of the built wheel works")
     }
     echo "packaging $php_files generated PHP files"
 
+    # Ask Composer whether it can read the manifest, then whether a consumer can reach a class
+    # through it. Both halves are needed and neither was checked before.
+    #
+    # v1.0.1 through v1.0.5 shipped with the reasoning behind the google/protobuf constraint
+    # written as an entry inside `require`. Composer parses every value in that object as a
+    # version constraint, so the note became `require _comment_protobuf: "Lower bound, not a
+    # caret. ..."` and the package stopped loading at all:
+    #
+    #   Link constraint in wildanfrananda/kinetix-contracts requires > _comment_protobuf
+    #   should be a valid version constraint, got "Lower bound, not a caret. ..."
+    #
+    # Five tags carried it. Nothing caught it because Packagist never crawled them, so the only
+    # version anyone could install stayed v1.0.0 — the broken constraint was hidden behind a
+    # broken publish, and fixing the publish alone would have shipped it.
+    ( cd "$work" && composer validate --strict --no-check-publish --no-check-lock ) || {
+      echo "the generated composer.json is not valid; refusing to publish it"
+      exit 1
+    }
+
+    probe="$(mktemp -d)"
+    cat > "$probe/composer.json" <<PROBE
+{
+  "name": "kinetix/publish-probe",
+  "repositories": [{ "type": "path", "url": "$work", "options": { "symlink": false } }],
+  "require": { "wildanfrananda/kinetix-contracts": "*" },
+  "minimum-stability": "stable"
+}
+PROBE
+    # ext-grpc is a native extension and this probe does not make a call; it asks whether the
+    # generated classes autoload and whether a money field survives the wire, which is the one
+    # property the whole repository exists to guarantee.
+    ( cd "$probe" \
+        && COMPOSER_NO_INTERACTION=1 composer install --quiet --no-progress --ignore-platform-req=ext-grpc \
+        && php -r '
+require "vendor/autoload.php";
+$m = new \Common\V1\Money();
+$m->setAmountMinor("9007199254740993");   // 2^53 + 1, the first integer a double cannot hold
+$m->setCurrency("IDR");
+$back = new \Common\V1\Money();
+$back->mergeFromString($m->serializeToString());
+if ((string) $back->getAmountMinor() !== "9007199254740993") {
+    fwrite(STDERR, "amount_minor came back as " . $back->getAmountMinor() . "\n");
+    exit(1);
+}
+new \Order\V1\GetOrderDetailsRequest();
+echo "the package autoloads and 2^53+1 survives a Money round-trip\n";
+' ) || {
+      echo "the assembled package does not install or does not autoload; refusing to publish it"
+      rm -rf "$probe"
+      exit 1
+    }
+    rm -rf "$probe"
+
     cat > "$work/README.md" <<EOF
 # kinetix-contracts-php
 
@@ -244,7 +304,43 @@ EOF
     git push --quiet --force "$remote" main
     git push --quiet "$remote" "$version"
 
-    echo "pushed $version to $split_repo; Packagist updates when its webhook fires"
+    echo "pushed $version to $split_repo"
+
+    # Tell Packagist directly rather than hoping a webhook exists.
+    #
+    # It did not. The package was submitted by hand at v1.0.0 and Packagist's crawler was never
+    # wired to the split repository, so five subsequent tags landed in git and nowhere else. A
+    # webhook is invisible when it is absent — there is no failure, just a version that quietly
+    # never appears — and it lives in a repository this workflow rebuilds and force-pushes, which
+    # is the last place to keep configuration. One API call from the job that made the tag is
+    # both visible and self-repairing.
+    ping="$(curl -sS --max-time 30 -X POST \
+      -H "Content-Type: application/json" \
+      -d "{\"repository\":{\"url\":\"https://github.com/${split_repo}\"}}" \
+      -o /tmp/packagist-update.json -w '%{http_code}' \
+      "https://packagist.org/api/update-package?username=${PACKAGIST_USERNAME}&apiToken=${PACKAGIST_API_TOKEN}")"
+
+    if [ "$ping" != "202" ] || [ "$(jq -r '.status // "missing"' /tmp/packagist-update.json)" != "success" ]; then
+      echo "Packagist did not accept the update request (HTTP $ping):"
+      cat /tmp/packagist-update.json
+      echo
+      echo "The tag is pushed and correct; only Packagist is behind. Check that PACKAGIST_API_TOKEN"
+      echo "belongs to a maintainer of wildanfrananda/kinetix-contracts — the token of a user who"
+      echo "is not a maintainer returns 403 here while working everywhere else."
+      exit 1
+    fi
+    echo "Packagist accepted the update request for $split_repo"
+
+    # Crawling is asynchronous, so this confirms rather than gates: a version that has not shown
+    # up in two minutes is usually still coming, and failing the job would not bring it sooner.
+    for _ in $(seq 1 8); do
+      sleep 15
+      if curl -sS --max-time 20 "https://repo.packagist.org/p2/wildanfrananda/kinetix-contracts.json?t=$(date +%s)" \
+           | jq -e --arg v "$version" '.packages["wildanfrananda/kinetix-contracts"][] | select(.version == $v)' >/dev/null 2>&1; then
+        echo "Packagist is serving $version"
+        break
+      fi
+    done
     ;;
 
 

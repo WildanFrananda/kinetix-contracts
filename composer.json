@@ -5,7 +5,7 @@
   "license": "proprietary",
   "require": {
     "php": ">=8.3",
-    "google/protobuf": "^4.29",
+    "google/protobuf": ">=4.29 <6",
     "grpc/grpc": "^1.67"
   },
   "autoload": {

@@ -113,6 +113,15 @@ jobs:
           name: generated
           path: gen/
 
+      # The PHP leg installs the package it is about to publish and autoloads a class out of it,
+      # so it needs the interpreter the manifest asks for rather than whatever the runner image
+      # happens to ship. The other three legs use tooling that is already present.
+      - uses: shivammathur/setup-php@v2
+        if: matrix.language == 'php'
+        with:
+          php-version: "8.3"
+          tools: composer
+
       - name: Publish ${{ matrix.language }} to ${{ matrix.registry }}
         env:
           VERSION: ${{ github.ref_name }}
@@ -120,4 +129,6 @@ jobs:
           PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
           RUBYGEMS_API_KEY: ${{ secrets.RUBYGEMS_API_KEY }}
           CONTRACTS_PHP_TOKEN: ${{ secrets.CONTRACTS_PHP_TOKEN }}
+          PACKAGIST_USERNAME: ${{ secrets.PACKAGIST_USERNAME }}
+          PACKAGIST_API_TOKEN: ${{ secrets.PACKAGIST_API_TOKEN }}
         run: bash packaging/publish.sh "${{ matrix.language }}"

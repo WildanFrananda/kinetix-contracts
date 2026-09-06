@@ -62,6 +62,31 @@ jobs:
       - name: Breaking change check against main
         run: buf breaking --against ".git#branch=main"
 
+  manifests:
+    runs-on: ubuntu-latest
+    # A packaging manifest is the one file in this repository that no proto lint reads and no
+    # test imports, so a mistake in one is invisible until a registry serves it.
+    #
+    # This job exists because of a specific one. The reasoning behind the google/protobuf
+    # constraint was written as an entry inside `require`, where Composer parses every value as a
+    # version constraint. Five tags shipped a package that could not be loaded at all, and only a
+    # separate bug — Packagist never crawling the split repository — kept anyone from installing
+    # it. `composer validate --strict` rejects it in under a second.
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          tools: composer
+
+      - name: The published manifest must be loadable
+        working-directory: packaging/composer
+        run: composer validate --strict --no-check-publish --no-check-lock
+
+      - name: The development manifest must be loadable
+        run: composer validate --strict --no-check-publish --no-check-lock
+
   moneylint-self-test:
     runs-on: ubuntu-latest
     # A lint rule that has never been seen to fail is not a lint rule. This job feeds moneylint
