@@ -246,19 +246,36 @@ print("importing identity.v1 and fulfillment.v1 out of the built wheel works")
     }
 
     probe="$(mktemp -d)"
+    # `*@dev` on this one package, not a global minimum-stability.
+    #
+    # A path repository takes its version from the checked-out branch, never from a tag, so the
+    # package under test always presents itself as dev-main here however it is tagged. Requiring
+    # it as `*` under stable stability therefore cannot resolve — which is what failed the v1.0.6
+    # run, and it failed for a reason that has nothing to do with the package:
+    #
+    #   wildanfrananda/kinetix-contracts[dev-main] from path repo has higher repository priority.
+    #   The packages from the higher priority repository do not match your minimum-stability
+    #
+    # The flag is per-constraint so google/protobuf and grpc/grpc still resolve stable. Version
+    # resolution is not what this probe is for; Packagist reads the real version off the git tag.
     cat > "$probe/composer.json" <<PROBE
 {
   "name": "kinetix/publish-probe",
   "repositories": [{ "type": "path", "url": "$work", "options": { "symlink": false } }],
-  "require": { "wildanfrananda/kinetix-contracts": "*" },
-  "minimum-stability": "stable"
+  "require": { "wildanfrananda/kinetix-contracts": "*@dev" },
+  "minimum-stability": "stable",
+  "prefer-stable": true
 }
 PROBE
     # ext-grpc is a native extension and this probe does not make a call; it asks whether the
     # generated classes autoload and whether a money field survives the wire, which is the one
     # property the whole repository exists to guarantee.
+    #
+    # Not --quiet. A guard that fails without saying why costs more than it saves: the first run
+    # of this one printed "could not be resolved to an installable set of packages" and nothing
+    # else, and the sentence naming the cause was the one Composer had been told to swallow.
     ( cd "$probe" \
-        && COMPOSER_NO_INTERACTION=1 composer install --quiet --no-progress --ignore-platform-req=ext-grpc \
+        && COMPOSER_NO_INTERACTION=1 composer install --no-progress --ignore-platform-req=ext-grpc \
         && php -r '
 require "vendor/autoload.php";
 $m = new \Common\V1\Money();
