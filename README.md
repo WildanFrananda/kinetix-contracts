@@ -125,13 +125,20 @@ the consumer's bug rather than as this repository's.
 
 ### What has to exist before the first tag
 
-Four accounts, one extra repository, and four repository secrets:
+Four accounts, one extra repository, and six repository secrets:
 
     NPM_TOKEN     PYPI_TOKEN     RUBYGEMS_API_KEY     CONTRACTS_PHP_TOKEN
+    PACKAGIST_USERNAME     PACKAGIST_API_TOKEN
 
 `CONTRACTS_PHP_TOKEN` is a fine-grained GitHub token with `contents: write` on
-`kinetix-contracts-php` and nothing else. Packagist itself needs no secret — it reads the split
-repository through a webhook — but that package has to be submitted there once by hand.
+`kinetix-contracts-php` and nothing else. The package still has to be submitted to Packagist once
+by hand.
+
+The two Packagist secrets are not optional and this README used to say they were: it claimed
+Packagist reads the split repository through a webhook. No webhook existed, and Packagist served
+v1.0.0 for five releases while every tag landed correctly in git. `publish.sh` now calls
+Packagist's update API itself. See [docs/packagist-publishing.md](docs/packagist-publishing.md)
+for what went wrong and the three traps worth remembering.
 
 Every branch of `publish.sh` refuses to run without its credential rather than skipping quietly.
 A publish job that exits 0 having published nothing is how a tag comes to mean three packages in
