@@ -55,6 +55,15 @@ jobs:
         with:
           fetch-depth: 0
 
+      # On a pull_request, actions/checkout leaves a detached HEAD whose only reference to the base
+      # is `origin/main`; there is no local branch called `main`. buf's `.git#branch=main` looks
+      # for exactly that name, so this job failed every single time it ran, with
+      # `fatal: couldn't find remote ref main` — an infrastructure error wearing the costume of a
+      # contract check. Verified 2026-09-17 against the run history: it had never once compared
+      # anything, and because nothing blocked a red merge, every PR went in past it.
+      - name: Make main resolvable locally
+        run: git fetch --no-tags origin main:main
+
       - uses: bufbuild/buf-action@v1
         with:
           setup_only: true
