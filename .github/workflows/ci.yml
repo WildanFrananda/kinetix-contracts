@@ -64,6 +64,20 @@ jobs:
       - name: Make main resolvable locally
         run: git fetch --no-tags origin main:main
 
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
+      # buf.yaml declares moneylint under a module-level `plugins:`, so *every* buf command loads
+      # it — `breaking` included, though it runs no lint rule. Only the `lint` job built the
+      # binary, so as soon as the fix above let this job reach the module at all it died on
+      # `fork/exec ./tools/moneylint/moneylint: no such file or directory`.
+      #
+      # Two failures, one cause: a gate that has never run cannot tell you what it needs.
+      - name: Build moneylint
+        working-directory: tools/moneylint
+        run: go build -o moneylint .
+
       - uses: bufbuild/buf-action@v1
         with:
           setup_only: true
