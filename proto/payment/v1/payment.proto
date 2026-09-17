@@ -10,6 +10,7 @@ service PaymentService {
   rpc ReleaseEscrow(ReleaseEscrowRequest) returns (EscrowHoldResponse);
   rpc RefundEscrow(RefundEscrowRequest) returns (EscrowHoldResponse);
   rpc GetEscrowStatus(GetEscrowStatusRequest) returns (EscrowHoldResponse);
+  rpc SettleShippingFee(SettleShippingFeeRequest) returns (EscrowHoldResponse);
 }
 
 enum EscrowStatus {
@@ -47,6 +48,12 @@ message GetEscrowStatusRequest {
   string order_number = 1;
 }
 
+message SettleShippingFeeRequest {
+  string order_number = 1;
+  string driver_principal_id = 2;
+  common.v1.IdempotencyKey idempotency_key = 3;
+}
+
 message EscrowHoldResponse {
   bool found = 1;
   string escrow_id = 2;
@@ -63,4 +70,5 @@ message EscrowHoldResponse {
   google.protobuf.Timestamp released_at = 13;
   bool already_applied = 14;
   common.v1.ErrorDetail error = 15;
+  google.protobuf.Timestamp shipping_fee_settled_at = 16;
 }
