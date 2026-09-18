@@ -149,3 +149,65 @@ jobs:
             exit 1
           fi
           echo "moneylint rejected it, as required"
+
+  breaking-self-test:
+    runs-on: ubuntu-latest
+    # The `breaking` job above was red for its entire life and nobody knew: it failed first on
+    # `couldn't find remote ref main`, then on a missing moneylint binary, both infrastructure
+    # errors wearing the costume of a contract check. It went green on 2026-09-17 — which proves it
+    # RUNS, not that it BITES.
+    #
+    # Same argument as moneylint-self-test, one job above: a gate that has never been seen to fail
+    # is not a gate. This feeds buf a change that is unambiguously breaking and fails if buf stays
+    # silent.
+    #
+    # Deleting a whole file rather than retyping a field, deliberately: FILE_NO_DELETE cannot rot
+    # as the protos are edited, while a sed against some specific field would quietly stop matching
+    # and take this assurance with it.
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
+      # buf.yaml declares moneylint at module level, so every buf command loads it — including
+      # breaking, which runs no lint rule at all.
+      - name: Build moneylint
+        working-directory: tools/moneylint
+        run: go build -o moneylint .
+
+      - uses: bufbuild/buf-action@v1
+        with:
+          setup_only: true
+
+      - name: buf breaking must reject a deleted file
+        run: |
+          mutant="$(mktemp -d)"
+          cp -R proto buf.yaml "$mutant/"
+          mkdir -p "$mutant/tools/moneylint"
+          cp tools/moneylint/moneylint "$mutant/tools/moneylint/"
+
+          victim=proto/geo/v1/geo.proto
+          test -f "$mutant/$victim" || { echo "$victim is gone; pick another victim for this test"; exit 1; }
+          rm "$mutant/$victim"
+
+          cd "$mutant"
+          if buf breaking --against "$GITHUB_WORKSPACE"; then
+            echo "buf accepted a deleted .proto — the breaking gate is not comparing anything"
+            exit 1
+          fi
+          echo "buf rejected it, as required"
+
+      # The other half of the same claim: with nothing changed, it must PASS. A check that fails on
+      # everything is as useless as one that fails on nothing, and would hide behind the test above.
+      - name: buf breaking must accept an identical module
+        run: |
+          twin="$(mktemp -d)"
+          cp -R proto buf.yaml "$twin/"
+          mkdir -p "$twin/tools/moneylint"
+          cp tools/moneylint/moneylint "$twin/tools/moneylint/"
+
+          cd "$twin"
+          buf breaking --against "$GITHUB_WORKSPACE"
+          echo "an unchanged module passed, as required"
