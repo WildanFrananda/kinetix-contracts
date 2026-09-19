@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package fulfillment.v1;
+
+import "common/v1/common.proto";
+
+service FulfillmentTaskService {
+  rpc CreateFulfillmentTask(CreateFulfillmentTaskRequest) returns (CreateFulfillmentTaskResponse);
+  rpc CancelFulfillmentTask(CancelFulfillmentTaskRequest) returns (CancelFulfillmentTaskResponse);
+}
+
+message FulfillmentTaskLine {
+  string sku = 1;
+  int32 quantity = 2;
+}
+
+message CreateFulfillmentTaskRequest {
+  string merchant_principal_id = 1;
+  string order_number = 2;
+  repeated FulfillmentTaskLine lines = 3;
+  common.v1.IdempotencyKey idempotency_key = 4;
+}
+
+message CreateFulfillmentTaskResponse {
+  bool success = 1;
+  string task_id = 2;
+  bool already_created = 3;
+  common.v1.ErrorDetail error = 4;
+}
+
+message CancelFulfillmentTaskRequest {
+  string merchant_principal_id = 1;
+  string task_id = 2;
+  string reason = 3;
+}
+
+message CancelFulfillmentTaskResponse {
+  bool success = 1;
+  bool already_cancelled = 2;
+  common.v1.ErrorDetail error = 3;
+}

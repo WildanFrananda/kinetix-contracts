@@ -7,6 +7,20 @@ import "common/v1/common.proto";
 service OrderService {
   rpc GetOrderDetails(GetOrderDetailsRequest) returns (GetOrderDetailsResponse);
   rpc ListOrdersForPrincipal(ListOrdersForPrincipalRequest) returns (ListOrdersForPrincipalResponse);
+  rpc FulfillmentPacked(FulfillmentPackedRequest) returns (FulfillmentPackedResponse);
+}
+
+message FulfillmentPackedRequest {
+  string merchant_principal_id = 1;
+  string order_number = 2;
+  string fulfillment_task_id = 3;
+}
+
+message FulfillmentPackedResponse {
+  bool success = 1;
+  bool already_packed = 2;
+  string dispatch_ref = 3;
+  common.v1.ErrorDetail error = 4;
 }
 
 message GetOrderDetailsRequest {
