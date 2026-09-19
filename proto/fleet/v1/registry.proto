@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package fleet.v1;
+
+import "common/v1/common.proto";
+
+service FleetRegistryService {
+  rpc RegisterDriver(RegisterDriverRequest) returns (RegisterDriverResponse);
+  rpc ActivateDriver(ActivateDriverRequest) returns (ActivateDriverResponse);
+}
+
+message RegisterDriverRequest {
+  string principal_id = 1;
+  string vehicle_plate = 2;
+  int32 capacity_kg = 3;
+}
+
+message RegisterDriverResponse {
+  bool success = 1;
+  int64 driver_id = 2;
+  bool already_registered = 3;
+  common.v1.ErrorDetail error = 4;
+}
+
+message ActivateDriverRequest {
+  string principal_id = 1;
+}
+
+message ActivateDriverResponse {
+  bool success = 1;
+  int64 driver_id = 2;
+  bool already_active = 3;
+  common.v1.ErrorDetail error = 4;
+}
