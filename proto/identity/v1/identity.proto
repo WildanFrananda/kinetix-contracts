@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package identity.v1;
 
+import "common/v1/common.proto";
+
 service IdentityService {
   rpc ResolvePrincipal(ResolvePrincipalRequest) returns (ResolvePrincipalResponse);
 
@@ -63,6 +65,8 @@ message GetUserProfileResponse {
   string city = 7;
   string postal_code = 8;
   PrincipalKind kind = 9;
+  bool has_location = 10;
+  common.v1.GeoPoint location = 11;
 }
 
 message GetMerchantInfoRequest {
@@ -76,6 +80,9 @@ message GetMerchantInfoResponse {
   string business_registration_number = 4;
   string tax_id = 5;
   MerchantStatus status = 6;
+  common.v1.Address pickup_address = 7;
+  bool has_location = 8;
+  common.v1.GeoPoint location = 9;
 }
 
 enum MerchantStatus {

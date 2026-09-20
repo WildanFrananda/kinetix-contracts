@@ -14,9 +14,12 @@ message DispatchCourierRequest {
   string merchant_principal_id = 1;
   string order_id = 2;
   string order_number = 3;
-  common.v1.Address pickup_address = 4;
-  common.v1.Address delivery_address = 5;
+  common.v1.Address pickup_address = 4 [deprecated = true];
+  common.v1.Address delivery_address = 5 [deprecated = true];
   common.v1.IdempotencyKey idempotency_key = 6;
+
+  common.v1.GeoPoint pickup_point = 7;
+  common.v1.GeoPoint delivery_point = 8;
 }
 
 message DispatchCourierResponse {
