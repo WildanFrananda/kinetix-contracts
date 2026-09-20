@@ -8,6 +8,19 @@ service OrderService {
   rpc GetOrderDetails(GetOrderDetailsRequest) returns (GetOrderDetailsResponse);
   rpc ListOrdersForPrincipal(ListOrdersForPrincipalRequest) returns (ListOrdersForPrincipalResponse);
   rpc FulfillmentPacked(FulfillmentPackedRequest) returns (FulfillmentPackedResponse);
+  rpc OrderDelivered(OrderDeliveredRequest) returns (OrderDeliveredResponse);
+}
+
+message OrderDeliveredRequest {
+  string order_number = 1;
+  string driver_principal_id = 2;
+  string delivered_at = 3;
+}
+
+message OrderDeliveredResponse {
+  bool accepted = 1;
+  bool already_delivered = 2;
+  common.v1.ErrorDetail error = 3;
 }
 
 message FulfillmentPackedRequest {
