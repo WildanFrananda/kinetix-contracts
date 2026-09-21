@@ -1,0 +1,98 @@
+syntax = "proto3";
+
+package notification.v1;
+
+import "common/v1/common.proto";
+
+service NotificationService {
+  rpc Notify(NotifyRequest) returns (NotifyResponse);
+  rpc GetDelivery(GetDeliveryRequest) returns (GetDeliveryResponse);
+  rpc RegisterDevice(RegisterDeviceRequest) returns (RegisterDeviceResponse);
+  rpc ForgetDevice(ForgetDeviceRequest) returns (ForgetDeviceResponse);
+}
+
+enum DevicePlatform {
+  DEVICE_PLATFORM_UNSPECIFIED = 0;
+  DEVICE_PLATFORM_ANDROID = 1;
+  DEVICE_PLATFORM_IOS = 2;
+}
+
+message RegisterDeviceRequest {
+  string principal_id = 1;
+  string device_token = 2;
+  DevicePlatform platform = 3;
+}
+
+message RegisterDeviceResponse {
+  bool registered = 1;
+  bool already_registered = 2;
+  common.v1.ErrorDetail error = 3;
+}
+
+message ForgetDeviceRequest {
+  string device_token = 1;
+}
+
+message ForgetDeviceResponse {
+  bool forgotten = 1;
+  common.v1.ErrorDetail error = 2;
+}
+
+enum Channel {
+  CHANNEL_UNSPECIFIED = 0;
+  CHANNEL_PUSH = 1;
+  CHANNEL_EMAIL = 2;
+}
+
+enum DeliveryStatus {
+  DELIVERY_STATUS_UNSPECIFIED = 0;
+  DELIVERY_STATUS_PENDING = 1;
+  DELIVERY_STATUS_SENT = 2;
+  DELIVERY_STATUS_FAILED = 3;
+  DELIVERY_STATUS_UNREACHABLE = 4;
+}
+
+enum Template {
+  TEMPLATE_UNSPECIFIED = 0;
+  TEMPLATE_ORDER_PAID = 1;
+  TEMPLATE_ORDER_PACKED = 2;
+  TEMPLATE_COURIER_ASSIGNED = 3;
+  TEMPLATE_ORDER_DELIVERED = 4;
+  TEMPLATE_COURIER_OFFER = 5;
+  TEMPLATE_RETURN_OPENED = 6;
+}
+
+message NotifyRequest {
+  string recipient_principal_id = 1;
+  Template template = 2;
+  map<string, string> params = 3;
+  repeated Channel channels = 4;
+  common.v1.IdempotencyKey idempotency_key = 5;
+}
+
+message NotifyResponse {
+  bool accepted = 1;
+  string notification_id = 2;
+  bool already_accepted = 3;
+  common.v1.ErrorDetail error = 4;
+}
+
+message GetDeliveryRequest {
+  string notification_id = 1;
+}
+
+message DeliveryAttempt {
+  Channel channel = 1;
+  DeliveryStatus status = 2;
+  int32 attempts = 3;
+  string last_error = 4;
+  string last_attempt_at = 5;
+}
+
+message GetDeliveryResponse {
+  bool found = 1;
+  string notification_id = 2;
+  string recipient_principal_id = 3;
+  Template template = 4;
+  repeated DeliveryAttempt attempts = 5;
+}
