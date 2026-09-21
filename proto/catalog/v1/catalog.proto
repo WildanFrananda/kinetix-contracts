@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package catalog.v1;
+
+import "common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+service CatalogService {
+  rpc ChangedSince(ChangedSinceRequest) returns (ChangedSinceResponse);
+  rpc GetProduct(GetProductRequest) returns (GetProductResponse);
+  rpc CountProducts(CountProductsRequest) returns (CountProductsResponse);
+}
+
+message Cursor {
+  google.protobuf.Timestamp updated_through = 1;
+  string last_sku = 2;
+}
+
+message Product {
+  string sku = 1;
+  string merchant_principal_id = 2;
+  string title = 3;
+  string description = 4;
+  common.v1.Money price = 5;
+  string image_url = 6;
+  string category_slug = 7;
+  string category_name = 8;
+  google.protobuf.Timestamp updated_at = 9;
+}
+
+message ChangedSinceRequest {
+  Cursor cursor = 1;
+  int32 limit = 2;
+}
+
+message ChangedSinceResponse {
+  repeated Product upserted = 1;
+  repeated string removed_skus = 2;
+  Cursor next = 3;
+  bool has_more = 4;
+}
+
+message GetProductRequest {
+  string sku = 1;
+}
+
+message GetProductResponse {
+  bool found = 1;
+  Product product = 2;
+}
+
+message CountProductsRequest {}
+
+message CountProductsResponse {
+  int64 total = 1;
+}
