@@ -7,6 +7,21 @@ import "common/v1/common.proto";
 service FulfillmentTaskService {
   rpc CreateFulfillmentTask(CreateFulfillmentTaskRequest) returns (CreateFulfillmentTaskResponse);
   rpc CancelFulfillmentTask(CancelFulfillmentTaskRequest) returns (CancelFulfillmentTaskResponse);
+  rpc RecordCourierAwb(RecordCourierAwbRequest) returns (RecordCourierAwbResponse);
+}
+
+message RecordCourierAwbRequest {
+  string merchant_principal_id = 1;
+  string fulfillment_task_id = 2;
+  string order_number = 3;
+  string awb_number = 4;
+  common.v1.IdempotencyKey idempotency_key = 5;
+}
+
+message RecordCourierAwbResponse {
+  bool accepted = 1;
+  bool already_recorded = 2;
+  common.v1.ErrorDetail error = 3;
 }
 
 message FulfillmentTaskLine {
