@@ -17,7 +17,6 @@ message DispatchCourierRequest {
   common.v1.Address pickup_address = 4 [deprecated = true];
   common.v1.Address delivery_address = 5 [deprecated = true];
   common.v1.IdempotencyKey idempotency_key = 6;
-
   common.v1.GeoPoint pickup_point = 7;
   common.v1.GeoPoint delivery_point = 8;
 }
@@ -26,11 +25,12 @@ message DispatchCourierResponse {
   bool success = 1;
   string dispatch_ref = 2;
   string assigned_driver_principal_id = 3;
-  string assigned_driver_name = 4;
-  string assigned_driver_phone = 5;
+  string assigned_driver_name = 4 [deprecated = true];
+  string assigned_driver_phone = 5 [deprecated = true];
   string vehicle = 6;
   int32 eta_minutes = 7;
   common.v1.ErrorDetail error = 8;
+  string awb_number = 9;
 }
 
 message DriverLocationPing {

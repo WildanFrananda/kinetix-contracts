@@ -6,6 +6,7 @@ import "common/v1/common.proto";
 
 service PricingService {
   rpc CalculatePrice(CalculatePriceRequest) returns (CalculatePriceResponse);
+  rpc QuoteShipping(QuoteShippingRequest) returns (QuoteShippingResponse);
 
   rpc RedeemVoucher(RedeemVoucherRequest) returns (RedeemVoucherResponse);
   rpc ReleaseVoucherRedemption(ReleaseVoucherRedemptionRequest) returns (ReleaseVoucherRedemptionResponse);
@@ -33,11 +34,32 @@ message PriceItemRequest {
   int32 quantity = 4;
 }
 
+message ShippingQuoteRequest {
+  string service_tier = 1;
+  double distance_km = 2;
+  int64 total_weight_grams = 3;
+}
+
+message QuoteShippingRequest {
+  repeated ShippingQuoteRequest journeys = 1;
+}
+
+message QuotedShipping {
+  string service_tier = 1;
+  common.v1.Money base_shipping_fee = 2;
+  bool priced = 3;
+}
+
+message QuoteShippingResponse {
+  repeated QuotedShipping quotes = 1;
+}
+
 message CalculatePriceRequest {
   repeated PriceItemRequest items = 1;
   optional string voucher_code = 2;
-  optional common.v1.Money base_shipping_fee = 3;
+  optional common.v1.Money base_shipping_fee = 3 [deprecated = true];
   optional string payment_method = 4;
+  optional ShippingQuoteRequest shipping = 5;
 }
 
 message PriceItemResponse {

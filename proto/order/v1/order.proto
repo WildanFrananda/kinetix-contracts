@@ -9,6 +9,52 @@ service OrderService {
   rpc ListOrdersForPrincipal(ListOrdersForPrincipalRequest) returns (ListOrdersForPrincipalResponse);
   rpc FulfillmentPacked(FulfillmentPackedRequest) returns (FulfillmentPackedResponse);
   rpc OrderDelivered(OrderDeliveredRequest) returns (OrderDeliveredResponse);
+  rpc OpenReturn(OpenReturnRequest) returns (OpenReturnResponse);
+  rpc ReturnGoodsReceived(ReturnGoodsReceivedRequest) returns (ReturnGoodsReceivedResponse);
+}
+
+enum ReturnStatus {
+  RETURN_STATUS_UNSPECIFIED = 0;
+  RETURN_STATUS_OPEN = 1;
+  RETURN_STATUS_GOODS_RECEIVED = 2;
+  RETURN_STATUS_RESOLVED = 3;
+  RETURN_STATUS_REJECTED = 4;
+}
+
+message OpenReturnRequest {
+  string order_number = 1;
+  string merchant_principal_id = 2;
+  string reason = 3;
+  common.v1.IdempotencyKey idempotency_key = 4;
+}
+
+message OpenReturnResponse {
+  bool success = 1;
+  string return_number = 2;
+  ReturnStatus status = 3;
+  bool already_open = 4;
+  common.v1.ErrorDetail error = 5;
+}
+
+message ReturnedLine {
+  string sku = 1;
+  int32 quantity = 2;
+}
+
+message ReturnGoodsReceivedRequest {
+  string return_number = 1;
+  string merchant_principal_id = 2;
+  repeated ReturnedLine lines = 3;
+  string bin_code = 4;
+  string received_at = 5;
+  common.v1.IdempotencyKey idempotency_key = 6;
+}
+
+message ReturnGoodsReceivedResponse {
+  bool accepted = 1;
+  bool already_recorded = 2;
+  ReturnStatus status = 3;
+  common.v1.ErrorDetail error = 4;
 }
 
 message OrderDeliveredRequest {

@@ -19,7 +19,7 @@ message CourierOption {
   string service_tier = 1;
   string service_name = 2;
   double distance_km = 3;
-  common.v1.Money base_shipping_fee = 4;
+  common.v1.Money base_shipping_fee = 4 [deprecated = true];
   string estimated_delivery_time = 5;
   bool is_available = 6;
   string unavailable_reason = 7;
