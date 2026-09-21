@@ -83,6 +83,7 @@ message GetMerchantInfoResponse {
   common.v1.Address pickup_address = 7;
   bool has_location = 8;
   common.v1.GeoPoint location = 9;
+  bool may_sell = 10;
 }
 
 enum MerchantStatus {
