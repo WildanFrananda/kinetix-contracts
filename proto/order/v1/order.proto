@@ -3,6 +3,7 @@ syntax = "proto3";
 package order.v1;
 
 import "common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
 
 service OrderService {
   rpc GetOrderDetails(GetOrderDetailsRequest) returns (GetOrderDetailsResponse);
@@ -11,6 +12,7 @@ service OrderService {
   rpc OrderDelivered(OrderDeliveredRequest) returns (OrderDeliveredResponse);
   rpc OpenReturn(OpenReturnRequest) returns (OpenReturnResponse);
   rpc ReturnGoodsReceived(ReturnGoodsReceivedRequest) returns (ReturnGoodsReceivedResponse);
+  rpc OrdersChangedSince(OrdersChangedSinceRequest) returns (OrdersChangedSinceResponse);
 }
 
 enum ReturnStatus {
@@ -118,4 +120,30 @@ message ListOrdersForPrincipalRequest {
 message ListOrdersForPrincipalResponse {
   repeated GetOrderDetailsResponse orders = 1;
   int32 total_count = 2;
+}
+
+message OrderCursor {
+  google.protobuf.Timestamp updated_through = 1;
+  string last_order_number = 2;
+}
+
+message OrderRecord {
+  string order_number = 1;
+  string buyer_principal_id = 2;
+  string merchant_principal_id = 3;
+  common.v1.OrderStatus status = 4;
+  repeated string line_titles = 5;
+  google.protobuf.Timestamp placed_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+
+message OrdersChangedSinceRequest {
+  OrderCursor cursor = 1;
+  int32 limit = 2;
+}
+
+message OrdersChangedSinceResponse {
+  repeated OrderRecord upserted = 1;
+  OrderCursor next = 2;
+  bool has_more = 3;
 }
