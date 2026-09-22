@@ -1,0 +1,74 @@
+syntax = "proto3";
+
+package search.v1;
+
+import "common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+service SearchService {
+  rpc SearchProducts(SearchProductsRequest) returns (SearchProductsResponse);
+  rpc SuggestProducts(SuggestProductsRequest) returns (SuggestProductsResponse);
+}
+
+enum RankingProfile {
+  RANKING_PROFILE_UNSPECIFIED = 0;
+  RANKING_PROFILE_RELEVANCE = 1;
+  RANKING_PROFILE_NEWEST = 2;
+  RANKING_PROFILE_PRICE_ASC = 3;
+}
+
+message Page {
+  int32 offset = 1;
+  int32 limit = 2;
+}
+
+message IndexFreshness {
+  google.protobuf.Timestamp indexed_through = 1;
+  int64 age_seconds = 2;
+  bool stale = 3;
+}
+
+message ProductHit {
+  string sku = 1;
+  string merchant_principal_id = 2;
+  string title = 3;
+  string description = 4;
+  common.v1.Money price = 5;
+  repeated string categories = 6;
+  google.protobuf.Timestamp updated_at = 7;
+  double score = 8;
+}
+
+message FacetValue {
+  string value = 1;
+  int64 count = 2;
+}
+
+message Facet {
+  string field = 1;
+  repeated FacetValue values = 2;
+}
+
+message SearchProductsRequest {
+  string text = 1;
+  repeated string categories = 2;
+  string merchant_principal_id = 3;
+  Page page = 4;
+  RankingProfile ranking = 5;
+}
+
+message SearchProductsResponse {
+  repeated ProductHit hits = 1;
+  int64 total = 2;
+  repeated Facet facets = 3;
+  IndexFreshness freshness = 4;
+}
+
+message SuggestProductsRequest {
+  string prefix = 1;
+  int32 limit = 2;
+}
+
+message SuggestProductsResponse {
+  repeated string suggestions = 1;
+}
