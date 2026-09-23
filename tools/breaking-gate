@@ -1,0 +1,112 @@
+#!/usr/bin/env bash
+# The breaking-change gate, with one door in it.
+#
+# `buf breaking` answers a question that has no exceptions: did this change break a consumer? The
+# answer is sometimes yes on purpose — a field that should never have existed, a name that cannot
+# be generated in one of the eight languages — and when it is, the check has to be able to say
+# "yes, and it is written down" rather than simply blocking the release for ever.
+#
+# So: every finding buf reports must appear, word for word, in docs/BREAKING.md under the version
+# being released. One that does not fails the gate and names itself. That keeps the cost of a
+# deliberate break where it belongs — you have to describe it, in the file consumers read when they
+# upgrade — while an accidental break still stops everything, which is the whole point.
+#
+# It is not a skip switch. There is no flag to pass, nothing to set in the environment, and a
+# register entry that does not match a real finding does nothing at all.
+#
+#   tools/breaking-gate --against ".git#branch=main"
+#   tools/breaking-gate --against ".git#tag=v1.0.19" --version v1.0.20
+#
+# Without --version the pending release is used: the newest heading in the register that no git tag
+# carries yet. That is what a pull request is, before the tag exists.
+
+set -uo pipefail
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+REGISTER="$HERE/docs/BREAKING.md"
+
+against=""
+version=""
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --against) against="${2:?--against needs a ref}"; shift 2 ;;
+    --version) version="${2:?--version needs a tag}"; shift 2 ;;
+    *) echo "unknown argument: $1" >&2; exit 2 ;;
+  esac
+done
+
+[ -n "$against" ] || { echo "usage: breaking-gate --against <ref> [--version <tag>]" >&2; exit 2; }
+
+cd "$HERE"
+
+output="$(buf breaking --against "$against" 2>&1)"
+status=$?
+
+if [ "$status" -eq 0 ]; then
+  echo "no breaking change against $against"
+  exit 0
+fi
+
+# buf writes `path:line:column:message`. Only the message is compared: line and column move every
+# time the file is edited, and a register that has to be renumbered is a register nobody updates.
+findings="$(printf '%s\n' "$output" | sed -nE 's#^[^:]+:[0-9]+:[0-9]+:(.*)$#\1#p')"
+
+if [ -z "$findings" ]; then
+  echo "buf failed for a reason that is not a breaking change:" >&2
+  printf '%s\n' "$output" >&2
+  exit "$status"
+fi
+
+if [ ! -f "$REGISTER" ]; then
+  echo "breaking changes were found and there is no docs/BREAKING.md to declare them in:" >&2
+  printf '%s\n' "$findings" >&2
+  exit 1
+fi
+
+if [ -z "$version" ]; then
+  # The pending release: the newest version in the register that has no tag yet.
+  while read -r heading; do
+    [ -n "$heading" ] || continue
+    if ! git rev-parse -q --verify "refs/tags/$heading" >/dev/null; then
+      version="$heading"
+      break
+    fi
+  done <<< "$(sed -nE 's/^## (v[0-9]+\.[0-9]+\.[0-9]+)$/\1/p' "$REGISTER")"
+fi
+
+if [ -z "$version" ]; then
+  echo "breaking changes were found and no unreleased version declares them:" >&2
+  printf '%s\n' "$findings" >&2
+  echo "add a '## vX.Y.Z' section to docs/BREAKING.md naming each line above." >&2
+  exit 1
+fi
+
+# The fenced block under this version's heading, verbatim.
+declared="$(awk -v want="## $version" '
+  $0 == want { in_section = 1; next }
+  in_section && /^## / { exit }
+  in_section && /^```/ { in_block = !in_block; next }
+  in_section && in_block { print }
+' "$REGISTER")"
+
+undeclared=0
+while IFS= read -r finding; do
+  [ -n "$finding" ] || continue
+  if printf '%s\n' "$declared" | grep -Fxq "$finding"; then
+    echo "  declared: $finding"
+  else
+    echo "  NOT DECLARED: $finding" >&2
+    undeclared=1
+  fi
+done <<< "$findings"
+
+if [ "$undeclared" -ne 0 ]; then
+  echo "" >&2
+  echo "$version does not declare every breaking change in this release." >&2
+  echo "Add the line above to its section in docs/BREAKING.md, word for word, with the reason." >&2
+  exit 1
+fi
+
+echo ""
+echo "every breaking change in this release is declared in docs/BREAKING.md under $version"

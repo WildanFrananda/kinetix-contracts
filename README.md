@@ -44,10 +44,17 @@ imports it. Each file names the task that will author it.
     cd tools/moneylint && go build -o moneylint . && cd ../..
     buf lint      # standard rules + moneylint
     buf format --diff --exit-code
-    buf breaking --against '.git#branch=main'
+    tools/breaking-gate --against '.git#branch=main'
 
 `buf lint` will not run until the plugin is built — the binary is gitignored on purpose, so the
 rule and its source can never drift apart.
+
+`tools/breaking-gate` wraps `buf breaking`. It fails on any breaking change that
+`docs/BREAKING.md` does not declare for the version being released, and passes on the ones it does
+— naming each either way. A deliberate break costs a written entry in the file consumers read when
+they bump a pin; an accidental one still stops the release. CI runs it on every pull request and
+again at the tag, and `breaking-gate-self-test` proves the register cannot excuse a change nobody
+wrote down.
 
 ## moneylint
 

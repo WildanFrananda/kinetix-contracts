@@ -60,7 +60,11 @@ jobs:
 
       - run: buf lint
       - run: buf format --diff --exit-code
-      - name: No breaking change against the previous tag
+      # Every breaking change against the previous tag must be declared in docs/BREAKING.md under
+      # the tag being released. A release that breaks something it never wrote down stops here, and
+      # so does one that breaks something nobody intended — which is the same check, from the same
+      # file a consumer reads when they bump their pin.
+      - name: Breaking changes must be declared
         run: |
           previous="$(git describe --tags --abbrev=0 "${GITHUB_REF_NAME}^" 2>/dev/null || true)"
           if [ -z "$previous" ]; then
@@ -68,7 +72,7 @@ jobs:
             exit 0
           fi
           echo "comparing against $previous"
-          buf breaking --against ".git#tag=$previous"
+          tools/breaking-gate --against ".git#tag=$previous" --version "$GITHUB_REF_NAME"
 
   generate:
     needs: verify
