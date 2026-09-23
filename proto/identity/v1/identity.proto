@@ -65,7 +65,7 @@ message GetUserProfileResponse {
   string city = 7;
   string postal_code = 8;
   PrincipalKind kind = 9;
-  bool has_location = 10;
+  reserved 10;
   common.v1.GeoPoint location = 11;
 }
 
@@ -81,7 +81,7 @@ message GetMerchantInfoResponse {
   string tax_id = 5;
   MerchantStatus status = 6;
   common.v1.Address pickup_address = 7;
-  bool has_location = 8;
+  reserved 8;
   common.v1.GeoPoint location = 9;
   bool may_sell = 10;
 }

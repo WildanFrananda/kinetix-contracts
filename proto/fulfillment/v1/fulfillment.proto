@@ -7,8 +7,18 @@ import "google/protobuf/timestamp.proto";
 
 service BinStockService {
   rpc CheckBinStock(CheckBinStockRequest) returns (CheckBinStockResponse);
+  rpc CheckBinStockBatch(CheckBinStockBatchRequest) returns (CheckBinStockBatchResponse);
   rpc ReserveStock(ReserveStockRequest) returns (ReserveStockResponse);
   rpc ReleaseStock(ReleaseStockRequest) returns (ReleaseStockResponse);
+}
+
+message CheckBinStockBatchRequest {
+  string merchant_principal_id = 1;
+  repeated string skus = 2;
+}
+
+message CheckBinStockBatchResponse {
+  repeated CheckBinStockResponse items = 1;
 }
 
 message CheckBinStockRequest {
