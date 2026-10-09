@@ -60,6 +60,7 @@ message CalculatePriceRequest {
   optional common.v1.Money base_shipping_fee = 3 [deprecated = true];
   optional string payment_method = 4;
   optional ShippingQuoteRequest shipping = 5;
+  optional string merchant_principal_id = 6;
 }
 
 message PriceItemResponse {
@@ -90,6 +91,7 @@ message RedeemVoucherRequest {
   string order_number = 2;
   string customer_principal_id = 3;
   common.v1.IdempotencyKey idempotency_key = 4;
+  optional string merchant_principal_id = 5;
 }
 
 message RedeemVoucherResponse {
