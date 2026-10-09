@@ -11,6 +11,7 @@ service PaymentService {
   rpc RefundEscrow(RefundEscrowRequest) returns (EscrowHoldResponse);
   rpc GetEscrowStatus(GetEscrowStatusRequest) returns (EscrowHoldResponse);
   rpc SettleShippingFee(SettleShippingFeeRequest) returns (EscrowHoldResponse);
+  rpc RefundGoods(RefundGoodsRequest) returns (EscrowHoldResponse);
 }
 
 enum EscrowStatus {
@@ -44,6 +45,13 @@ message RefundEscrowRequest {
   common.v1.IdempotencyKey idempotency_key = 3;
 }
 
+message RefundGoodsRequest {
+  string order_number = 1;
+  common.v1.Money amount = 2;
+  string reason = 3;
+  common.v1.IdempotencyKey idempotency_key = 4;
+}
+
 message GetEscrowStatusRequest {
   string order_number = 1;
 }
@@ -71,4 +79,5 @@ message EscrowHoldResponse {
   bool already_applied = 14;
   common.v1.ErrorDetail error = 15;
   google.protobuf.Timestamp shipping_fee_settled_at = 16;
+  common.v1.Money goods_refunded_amount = 17;
 }
