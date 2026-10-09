@@ -192,6 +192,18 @@ jobs:
             exit 1
           fi
 
+          # Named rather than left to the gate. Unnamed, the gate checks the pending release, and
+          # between releases every heading is tagged and there is none: it then refuses for that
+          # reason, and this test would be watching the wrong door.
+          declared="$(sed -nE 's/^## (v[0-9]+\.[0-9]+\.[0-9]+)$/\1/p' docs/BREAKING.md | head -1)"
+          test -n "$declared" || { echo "docs/BREAKING.md declares no version; there is no register to test"; exit 1; }
+
+          if tools/breaking-gate --against ".git#branch=main" --version "$declared" > gate.out 2>&1; then
+            echo "$declared excused a deleted .proto it does not mention:"
+            cat gate.out
+            exit 1
+          fi
+
           grep -q "NOT DECLARED" gate.out || {
             echo "the gate refused, but not for the reason this test is about:"
             cat gate.out
