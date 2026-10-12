@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package payment.v1;
+
+import "common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+service LiabilityService {
+  rpc StreamLiabilitySnapshot(StreamLiabilitySnapshotRequest) returns (stream StreamLiabilitySnapshotResponse);
+}
+
+enum LiabilityKind {
+  LIABILITY_KIND_UNSPECIFIED = 0;
+  LIABILITY_KIND_CUSTOMER_BALANCE = 1;
+  LIABILITY_KIND_MERCHANT_AVAILABLE = 2;
+  LIABILITY_KIND_MERCHANT_PENDING_ESCROW = 3;
+  LIABILITY_KIND_DRIVER_AVAILABLE = 4;
+  LIABILITY_KIND_DRIVER_PENDING_ESCROW = 5;
+  LIABILITY_KIND_SUSPENSE_AVAILABLE = 6;
+  LIABILITY_KIND_SUSPENSE_PENDING_ESCROW = 7;
+}
+
+message StreamLiabilitySnapshotRequest {
+  string currency = 1;
+}
+
+message StreamLiabilitySnapshotResponse {
+  oneof part {
+    LiabilitySnapshotHeader header = 1;
+    LiabilityAccountBatch accounts = 2;
+    LiabilitySnapshotTrailer trailer = 3;
+  }
+}
+
+message LiabilitySnapshotHeader {
+  google.protobuf.Timestamp as_of = 1;
+  string currency = 2;
+}
+
+message LiabilityAccountBatch {
+  repeated LiabilityAccount accounts = 1;
+}
+
+message LiabilityAccount {
+  LiabilityKind kind = 1;
+  oneof holder {
+    string principal_id = 2;
+    string suspense_purpose = 3;
+  }
+  common.v1.Money balance = 4;
+}
+
+message LiabilitySnapshotTrailer {
+  int64 account_count = 1;
+  common.v1.Money total = 2;
+}
