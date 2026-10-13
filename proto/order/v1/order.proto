@@ -108,6 +108,8 @@ message GetOrderDetailsResponse {
   common.v1.Money final_total = 9;
   repeated OrderLine lines = 10;
   common.v1.Address shipping_address = 11;
+  string merchant_principal_id = 12;
+  string driver_principal_id = 13;
 }
 
 message ListOrdersForPrincipalRequest {
