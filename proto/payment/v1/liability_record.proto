@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package payment.v1;
+
+import "common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+service LiabilityRecordService {
+  rpc GetLiabilitySnapshotRecord(GetLiabilitySnapshotRecordRequest) returns (GetLiabilitySnapshotRecordResponse);
+}
+
+message GetLiabilitySnapshotRecordRequest {
+  string snapshot_id = 1;
+}
+
+message GetLiabilitySnapshotRecordResponse {
+  string snapshot_id = 1;
+  google.protobuf.Timestamp as_of = 2;
+  string currency = 3;
+  int64 account_count = 4;
+  common.v1.Money total = 5;
+  bytes digest = 6;
+}
