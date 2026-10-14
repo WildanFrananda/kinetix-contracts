@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package notary.v1;
+
+import "common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+import "payment/v1/liability.proto";
+
+service EpochWatchService {
+  rpc ApproveEpoch(stream ApproveEpochRequest) returns (ApproveEpochResponse);
+}
+
+message ApproveEpochRequest {
+  oneof part {
+    EpochProposal proposal = 1;
+    ProposedAccountBatch accounts = 2;
+  }
+}
+
+message EpochProposal {
+  string snapshot_id = 1;
+  uint64 number = 2;
+  bytes previous_digest = 3;
+  bytes root = 4;
+  common.v1.Money total = 5;
+  uint64 leaf_count = 6;
+  google.protobuf.Timestamp as_of = 7;
+}
+
+message ProposedAccountBatch {
+  repeated ProposedAccount accounts = 1;
+}
+
+message ProposedAccount {
+  payment.v1.LiabilityKind kind = 1;
+  string holder = 2;
+  common.v1.Money balance = 3;
+  bytes secret = 4;
+  bytes salt = 5;
+}
+
+message ApproveEpochResponse {
+  bytes member = 1;
+  bytes signature = 2;
+}

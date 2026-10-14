@@ -35,6 +35,7 @@ message StreamLiabilitySnapshotResponse {
 message LiabilitySnapshotHeader {
   google.protobuf.Timestamp as_of = 1;
   string currency = 2;
+  string snapshot_id = 3;
 }
 
 message LiabilityAccountBatch {
@@ -53,4 +54,5 @@ message LiabilityAccount {
 message LiabilitySnapshotTrailer {
   int64 account_count = 1;
   common.v1.Money total = 2;
+  bytes digest = 3;
 }
