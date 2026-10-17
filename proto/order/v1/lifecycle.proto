@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package order.v1;
+
+import "common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+import "order/v1/order.proto";
+
+service OrderLifecycleService {
+  rpc LifecycleEventsSince(LifecycleEventsSinceRequest) returns (LifecycleEventsSinceResponse);
+}
+
+enum LifecycleEventKind {
+  LIFECYCLE_EVENT_KIND_UNSPECIFIED = 0;
+  LIFECYCLE_EVENT_KIND_STATUS_CHANGED = 1;
+  LIFECYCLE_EVENT_KIND_RETURN_OPENED = 2;
+  LIFECYCLE_EVENT_KIND_RETURN_GOODS_RECEIVED = 3;
+  LIFECYCLE_EVENT_KIND_RETURN_RESOLVED = 4;
+  LIFECYCLE_EVENT_KIND_RETURN_REJECTED = 5;
+  LIFECYCLE_EVENT_KIND_BASELINE = 6;
+}
+
+enum LifecycleActorKind {
+  LIFECYCLE_ACTOR_KIND_UNSPECIFIED = 0;
+  LIFECYCLE_ACTOR_KIND_BUYER = 1;
+  LIFECYCLE_ACTOR_KIND_MERCHANT = 2;
+  LIFECYCLE_ACTOR_KIND_DRIVER = 3;
+  LIFECYCLE_ACTOR_KIND_ADMIN = 4;
+  LIFECYCLE_ACTOR_KIND_SYSTEM = 5;
+}
+
+message LifecycleEvent {
+  common.v1.LogCursor position = 1;
+  string order_number = 2;
+  LifecycleEventKind kind = 3;
+  common.v1.OrderStatus from_status = 4;
+  common.v1.OrderStatus to_status = 5;
+  string return_number = 6;
+  ReturnStatus return_status = 7;
+  LifecycleActorKind actor_kind = 8;
+  string actor_principal_id = 9;
+  string buyer_principal_id = 10;
+  string merchant_principal_id = 11;
+  google.protobuf.Timestamp occurred_at = 12;
+}
+
+message LifecycleEventsSinceRequest {
+  common.v1.LogCursor after = 1;
+  int32 limit = 2;
+}
+
+message LifecycleEventsSinceResponse {
+  repeated LifecycleEvent events = 1;
+  common.v1.LogCursor next = 2;
+  bool has_more = 3;
+}

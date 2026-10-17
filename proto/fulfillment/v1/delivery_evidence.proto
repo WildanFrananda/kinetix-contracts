@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package fulfillment.v1;
+
+import "common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+service DeliveryEvidenceService {
+  rpc DeliveriesSince(DeliveriesSinceRequest) returns (DeliveriesSinceResponse);
+}
+
+message DeliveryEvidence {
+  common.v1.LogCursor position = 1;
+  string order_number = 2;
+  string driver_principal_id = 3;
+  bytes photo_sha256 = 4;
+  bytes signature_sha256 = 5;
+  google.protobuf.Timestamp delivered_at = 6;
+}
+
+message DeliveriesSinceRequest {
+  common.v1.LogCursor after = 1;
+  int32 limit = 2;
+}
+
+message DeliveriesSinceResponse {
+  repeated DeliveryEvidence deliveries = 1;
+  common.v1.LogCursor next = 2;
+  bool has_more = 3;
+}
