@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package review.v1;
+
+import "common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+service ReviewEvidenceService {
+  rpc ReviewsSince(ReviewsSinceRequest) returns (ReviewsSinceResponse);
+}
+
+enum ReviewKind {
+  REVIEW_KIND_UNSPECIFIED = 0;
+  REVIEW_KIND_PRODUCT = 1;
+  REVIEW_KIND_DRIVER = 2;
+}
+
+message ReviewEvidence {
+  common.v1.LogCursor position = 1;
+  string review_id = 2;
+  ReviewKind kind = 3;
+  string order_id = 4;
+  string subject_id = 5;
+  string author_principal_id = 6;
+  string merchant_principal_id = 7;
+  int32 rating = 8;
+  bytes comment_sha256 = 9;
+  google.protobuf.Timestamp created_at = 10;
+}
+
+message ReviewsSinceRequest {
+  common.v1.LogCursor after = 1;
+  int32 limit = 2;
+}
+
+message ReviewsSinceResponse {
+  repeated ReviewEvidence reviews = 1;
+  common.v1.LogCursor next = 2;
+  bool has_more = 3;
+}
