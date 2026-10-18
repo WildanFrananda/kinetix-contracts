@@ -19,6 +19,7 @@ message DispatchCourierRequest {
   common.v1.IdempotencyKey idempotency_key = 6;
   common.v1.GeoPoint pickup_point = 7;
   common.v1.GeoPoint delivery_point = 8;
+  int64 parcel_weight_grams = 9;
 }
 
 message DispatchCourierResponse {
