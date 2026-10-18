@@ -26,6 +26,7 @@ message Product {
   string category_slug = 7;
   string category_name = 8;
   google.protobuf.Timestamp updated_at = 9;
+  optional int64 weight_grams = 10;
 }
 
 message ChangedSinceRequest {
