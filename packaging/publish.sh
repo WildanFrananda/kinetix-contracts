@@ -315,11 +315,15 @@ EOF
 
     remote="https://x-access-token:${CONTRACTS_PHP_TOKEN}@github.com/${split_repo}.git"
 
-    # The branch is force-pushed because it is a rebuild, not a history. The tag is not, and
+    # The branch is force-pushed because it is a rebuild, not a history (`+main`). The tag is not, and
     # deliberately so: a tag that can move is a version that can change meaning underneath a
-    # consumer that already resolved it. Plain `git push` fails outright if the tag exists.
-    git push --quiet --force "$remote" main
-    git push --quiet "$remote" "$version"
+    # consumer that already resolved it, and a refspec without `+` fails outright if the tag exists.
+    #
+    # One push, atomic, carrying both. v1.4.0 was released on 2026-10-18 with two pushes, branch then
+    # tag, and GitHub refused the second, "remote rejected v1.4.0 (missing necessary objects)", for
+    # the commit the first had just delivered. main moved and the tag never landed. In one push the
+    # tag travels with its objects, and --atomic means neither ref moves unless both do.
+    git push --quiet --atomic "$remote" "+refs/heads/main:refs/heads/main" "refs/tags/$version:refs/tags/$version"
 
     echo "pushed $version to $split_repo"
 
