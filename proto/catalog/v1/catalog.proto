@@ -14,6 +14,7 @@ service CatalogService {
 message Cursor {
   google.protobuf.Timestamp updated_through = 1;
   string last_sku = 2;
+  optional uint64 transaction_id = 3;
 }
 
 message Product {
