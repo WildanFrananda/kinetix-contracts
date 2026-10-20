@@ -25,6 +25,15 @@ message EpochProposal {
   common.v1.Money total = 5;
   uint64 leaf_count = 6;
   google.protobuf.Timestamp as_of = 7;
+  ConfidentialProposal confidential = 8;
+}
+
+message ConfidentialProposal {
+  uint32 scheme = 1;
+  uint32 depth = 2;
+  bytes tree_root = 3;
+  bytes total_commitment = 4;
+  bytes blinding = 5;
 }
 
 message ProposedAccountBatch {
