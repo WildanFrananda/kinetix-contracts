@@ -41,6 +41,11 @@ plugins:
       # not have — and did not have, which is how v1.0.0 went out as 368 bytes of package.json
       # and nothing else. npm reported success.
       - target=js+dts
+      # Relative imports carry `.js`. The package is `"type": "module"`, and Node's ESM loader
+      # resolves no extensionless specifier: v1.7.0 imported "../../common/v1/common_pb", which a
+      # bundler forgives (the docs site never noticed) and Node does not, so the first service to
+      # import the JavaScript itself (seal) could not load a single message.
+      - import_extension=js
 
   # Python — kinetix-catalog-service (Django) → PyPI
   - remote: buf.build/protocolbuffers/python:v29.3

@@ -79,6 +79,38 @@ case "$language" in
     done
     echo "packaging ${js} modules, ${dts} declarations and ${proto} .proto sources"
 
+    # Every module loads the way Node loads it, before anything ships. v1.7.0 went out with
+    # extensionless relative imports ("../../common/v1/common_pb"): bundlers resolve them, Node's
+    # ESM loader does not, so the package installed cleanly and no message in it could be imported
+    # outside a bundler. `import_extension=js` in buf.gen.yaml is the fix; this is the proof.
+    npm install --ignore-scripts --no-audit --no-fund --no-save >/dev/null
+    node --input-type=module -e '
+      import { readdirSync } from "node:fs"
+      import { join, resolve } from "node:path"
+      import { pathToFileURL } from "node:url"
+
+      function modules(directory) {
+        return readdirSync(directory, { withFileTypes: true }).flatMap((entry) =>
+          entry.isDirectory() ? modules(join(directory, entry.name)) : entry.name.endsWith("_pb.js") ? [join(directory, entry.name)] : []
+        )
+      }
+
+      const found = modules("src")
+      const broken = []
+
+      for (const file of found) {
+        await import(pathToFileURL(resolve(file)).href).catch((error) => broken.push(`${file}: ${error.message}`))
+      }
+
+      if (broken.length > 0) {
+        console.error(`${broken.length} of ${found.length} modules do not load under Node ESM:`)
+        console.error(broken.join("\n"))
+        process.exit(1)
+      }
+
+      console.log(`all ${found.length} modules load under Node ESM`)
+    '
+
     printf '//registry.npmjs.org/:_authToken=%s\n' "$NPM_TOKEN" > .npmrc
     npm publish --access public
     ;;
