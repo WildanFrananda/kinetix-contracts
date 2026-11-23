@@ -10,6 +10,7 @@ service IdentityService {
   rpc GetPrincipal(GetPrincipalRequest) returns (GetPrincipalResponse);
   rpc GetUserProfile(GetUserProfileRequest) returns (GetUserProfileResponse);
   rpc GetMerchantInfo(GetMerchantInfoRequest) returns (GetMerchantInfoResponse);
+  rpc GetCourierStanding(GetCourierStandingRequest) returns (GetCourierStandingResponse);
   rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
   rpc MerchantsChangedSince(MerchantsChangedSinceRequest) returns (MerchantsChangedSinceResponse);
 }
@@ -129,4 +130,24 @@ message MerchantsChangedSinceResponse {
   repeated string removed_principal_ids = 2;
   MerchantCursor next = 3;
   bool has_more = 4;
+}
+
+enum CourierStatus {
+  COURIER_STATUS_UNSPECIFIED = 0;
+  COURIER_STATUS_PENDING = 1;
+  COURIER_STATUS_APPROVED = 2;
+  COURIER_STATUS_REJECTED = 3;
+}
+
+message GetCourierStandingRequest {
+  string principal_id = 1;
+}
+
+message GetCourierStandingResponse {
+  bool found = 1;
+  string courier_principal_id = 2;
+  string vehicle_plate = 3;
+  int32 capacity_kg = 4;
+  CourierStatus status = 5;
+  bool may_drive = 6;
 }
